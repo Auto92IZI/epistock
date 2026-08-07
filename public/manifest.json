@@ -1,0 +1,21 @@
+{
+  "name": "DI Shop - Épicerie mini prix",
+  "short_name": "DI Shop",
+  "description": "Faites vos courses en ligne chez DI Shop",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF8",
+  "theme_color": "#1E7A3C",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
