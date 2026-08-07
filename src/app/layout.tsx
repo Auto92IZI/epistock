@@ -41,6 +41,7 @@ export default function RootLayout({
     >
       <head>
         <link rel="apple-touch-icon" href="/logo.png" />
+        <meta name="color-scheme" content="light" />
       </head>
       <body className="min-h-full flex flex-col">
         <RegisterSW />

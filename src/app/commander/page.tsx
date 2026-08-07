@@ -321,7 +321,7 @@ const commandeId = resultat.commandeId;
                     {produit.nom}
                   </h2>
 
-                  <p className="mt-2 text-gray-600">
+                  <p className="mt-2 text-gray-700">
                     Stock disponible : {produit.stock}
                   </p>
 
