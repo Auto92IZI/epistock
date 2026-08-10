@@ -254,6 +254,35 @@ Merci.`
 
 
 
+  async function marquerRecuperee(
+    commandeId:number
+  ){
+
+    const confirmation = window.confirm(
+      "Confirmer que cette commande a été récupérée ? Elle sera supprimée de la liste."
+    )
+
+      return
+    }
+
+    const res = await fetch(`/api/commandes/${commandeId}`, {
+      method: "DELETE",
+    })
+
+    const data = await res.json()
+
+    if(data.success){
+      setCommandes((anciennes) =>
+        anciennes.filter((commande) => commande.id !== commandeId)
+      )
+    } else {
+      alert("Erreur lors de la suppression de la commande")
+    }
+
+  }
+
+
+
   function validerEtPrevenir(
     commande:Commande
   ){
@@ -564,6 +593,32 @@ Merci.`
               >
 
                 Renvoyer le message au client
+
+              </button>
+
+            }
+
+
+
+            {
+              commande.statut === "Prête"
+
+              &&
+
+
+              <button
+
+                onClick={()=>
+                  marquerRecuperee(
+                    commande.id
+                  )
+                }
+
+                className="bg-gray-700 text-white px-4 py-2 rounded ml-2"
+
+              >
+
+                ✅ Marquer comme récupérée
 
               </button>
 
