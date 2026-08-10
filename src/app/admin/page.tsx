@@ -225,7 +225,7 @@ export default function AdminPage() {
     const message =
 `Bonjour ${commande.client_nom},
 
-Votre commande EpiStock est prête.
+Votre commande DI Shop est prête.
 
 Vous pouvez venir la récupérer à la date prévue.
 
@@ -329,7 +329,7 @@ Merci.`
       <div className="flex items-center justify-between">
 
         <h1 className="text-3xl font-bold">
-          Administration EpiStock
+          Administration DI Shop
         </h1>
 
         <div className="flex items-center gap-4">
