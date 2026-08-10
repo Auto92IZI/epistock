@@ -232,11 +232,14 @@ Vous pouvez venir la récupérer à la date prévue.
 Merci.`
 
 
-    const telephone =
-      commande.client_telephone.replace(
-        /\s/g,
-        ""
-      )
+    let telephone = commande.client_telephone.replace(/\s/g, "")
+
+    // Conversion au format international attendu par WhatsApp
+    if (telephone.startsWith("0")) {
+      telephone = "33" + telephone.slice(1)
+    } else if (telephone.startsWith("+")) {
+      telephone = telephone.slice(1)
+    }
 
 
     const lien = document.createElement("a")
