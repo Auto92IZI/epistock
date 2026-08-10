@@ -254,6 +254,20 @@ Merci.`
 
 
 
+  function validerEtPrevenir(
+    commande:Commande
+  ){
+
+    // On ouvre WhatsApp tout de suite pour garder le geste de clic
+    // (nécessaire sur mobile pour que l'ouverture ne soit pas bloquée)
+    prevenirClient(commande)
+
+    mettreCommandePrete(commande.id)
+
+  }
+
+
+
   async function marquerRecuperee(
     commandeId:number
   ){
@@ -262,6 +276,7 @@ Merci.`
       "Confirmer que cette commande a été récupérée ? Elle sera supprimée de la liste."
     )
 
+    if(!confirmation){
       return
     }
 
@@ -283,16 +298,9 @@ Merci.`
 
 
 
-  function validerEtPrevenir(
-    commande:Commande
-  ){
-
-    // On ouvre WhatsApp tout de suite pour garder le geste de clic
-    // (nécessaire sur mobile pour que l'ouverture ne soit pas bloquée)
-    prevenirClient(commande)
-
-    mettreCommandePrete(commande.id)
-
+  async function deconnexion() {
+    await fetch("/api/logout", { method: "POST" })
+    window.location.href = "/admin/login"
   }
 
 
@@ -330,10 +338,7 @@ Merci.`
           </Link>
 
           <button
-            onClick={async () => {
-              await fetch("/api/logout", { method: "POST" })
-              window.location.href = "/admin/login"
-            }}
+            onClick={deconnexion}
             className="text-sm text-gray-500 underline"
           >
             Se déconnecter
@@ -588,7 +593,7 @@ Merci.`
                   )
                 }
 
-                className="bg-green-600 text-white px-4 py-2 rounded"
+                className="bg-green-600 text-white px-4 py-2 rounded mr-2"
 
               >
 
@@ -614,7 +619,7 @@ Merci.`
                   )
                 }
 
-                className="bg-gray-700 text-white px-4 py-2 rounded ml-2"
+                className="bg-gray-700 text-white px-4 py-2 rounded"
 
               >
 
