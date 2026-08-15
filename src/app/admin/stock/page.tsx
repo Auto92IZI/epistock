@@ -440,7 +440,7 @@ export default function StockPage() {
                       )}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Stock actuel : {produit.stock} · Prix : {produit.prix.toFixed(2)} €
+                      Stock actuel : {produit.stock} · Prix : {produit.prix != null ? produit.prix.toFixed(2) + " €" : "non défini"}
                     </p>
 
                     <div className="flex gap-3 mt-1">
