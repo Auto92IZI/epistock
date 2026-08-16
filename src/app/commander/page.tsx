@@ -90,6 +90,10 @@ export default function Home() {
         );
       }
 
+      if (produit.stock <= 0) {
+        return panierActuel;
+      }
+
       return [...panierActuel, { produit, quantite: 1 }];
     });
   }
@@ -357,9 +361,10 @@ const commandeId = resultat.commandeId;
                   {quantite === 0 && (
                     <button
                       onClick={() => ajouterAuPanier(produit)}
-                      className="mt-auto w-full rounded-lg bg-black px-4 py-3 font-semibold text-white transition hover:bg-gray-800"
+                      disabled={produit.stock <= 0}
+                      className="mt-auto w-full rounded-lg bg-black px-4 py-3 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
                     >
-                      Ajouter au panier
+                      {produit.stock <= 0 ? "Rupture de stock" : "Ajouter au panier"}
                     </button>
                   )}
 
