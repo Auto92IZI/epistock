@@ -15,6 +15,7 @@ export async function PATCH(
       nom?: string
       categorie?: string | null
       prix?: number
+      code_barre?: string | null
     } = {}
 
     if (typeof body.disponible === "boolean") {
@@ -35,6 +36,10 @@ export async function PATCH(
 
     if (typeof body.prix === "number" && !isNaN(body.prix)) {
       misAJour.prix = body.prix
+    }
+
+    if (body.codeBarre !== undefined) {
+      misAJour.code_barre = body.codeBarre || null
     }
 
     const { error } = await supabaseAdmin

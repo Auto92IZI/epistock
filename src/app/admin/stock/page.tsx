@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import BarcodeScanner from "@/components/BarcodeScanner"
 
 type Produit = {
   id: number
@@ -12,6 +13,7 @@ type Produit = {
   stock: number
   disponible: boolean
   image_url: string | null
+  code_barre: string | null
 }
 
 export default function StockPage() {
@@ -19,11 +21,13 @@ export default function StockPage() {
   const [chargement, setChargement] = useState(true)
   const [quantites, setQuantites] = useState<{ [id: number]: string }>({})
   const [messageStatut, setMessageStatut] = useState<{ [id: number]: string }>({})
+  const [recherche, setRecherche] = useState("")
 
   const [nouveauNom, setNouveauNom] = useState("")
   const [nouvelleCategorie, setNouvelleCategorie] = useState("")
   const [nouveauPrix, setNouveauPrix] = useState("")
   const [nouveauStock, setNouveauStock] = useState("")
+  const [nouveauCodeBarre, setNouveauCodeBarre] = useState("")
   const [nouvellePhoto, setNouvellePhoto] = useState<File | null>(null)
   const [ajoutEnCours, setAjoutEnCours] = useState(false)
 
@@ -33,7 +37,12 @@ export default function StockPage() {
   const [editNom, setEditNom] = useState("")
   const [editCategorie, setEditCategorie] = useState("")
   const [editPrix, setEditPrix] = useState("")
+  const [editCodeBarre, setEditCodeBarre] = useState("")
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false)
+
+  const [scannerOuvert, setScannerOuvert] = useState<"filtrer" | "nouveau" | "edition" | null>(null)
+
+  const refsQuantite = useRef<{ [id: number]: HTMLInputElement | null }>({})
 
   useEffect(() => {
     chargerProduits()
@@ -44,7 +53,7 @@ export default function StockPage() {
 
     const { data, error } = await supabase
       .from("Produits")
-      .select("id, nom, categorie, prix, stock, disponible, image_url")
+      .select("id, nom, categorie, prix, stock, disponible, image_url, code_barre")
       .order("nom", { ascending: true })
 
     if (error) {
@@ -194,6 +203,7 @@ export default function StockPage() {
     setEditNom(produit.nom)
     setEditCategorie(produit.categorie || "")
     setEditPrix(produit.prix.toString())
+    setEditCodeBarre(produit.code_barre || "")
   }
 
   function annulerEdition() {
@@ -214,6 +224,7 @@ export default function StockPage() {
         nom: editNom.trim(),
         categorie: editCategorie || null,
         prix: parseFloat(editPrix),
+        codeBarre: editCodeBarre.trim() || null,
       }),
     })
 
@@ -230,6 +241,7 @@ export default function StockPage() {
                 nom: editNom.trim(),
                 categorie: editCategorie || null,
                 prix: parseFloat(editPrix),
+                code_barre: editCodeBarre.trim() || null,
               }
             : p
         )
@@ -264,6 +276,7 @@ export default function StockPage() {
         prix: parseFloat(nouveauPrix),
         stock: parseInt(nouveauStock || "0", 10),
         imageUrl,
+        codeBarre: nouveauCodeBarre.trim() || null,
       }),
     })
 
@@ -279,11 +292,51 @@ export default function StockPage() {
       setNouvelleCategorie("")
       setNouveauPrix("")
       setNouveauStock("")
+      setNouveauCodeBarre("")
       setNouvellePhoto(null)
     } else {
       alert("Erreur lors de l'ajout du produit")
     }
   }
+
+  function gererScan(code: string) {
+    setScannerOuvert(null)
+
+    if (scannerOuvert === "nouveau") {
+      setNouveauCodeBarre(code)
+      return
+    }
+
+    if (scannerOuvert === "edition") {
+      setEditCodeBarre(code)
+      return
+    }
+
+    // Mode "filtrer" : on cherche le produit correspondant
+    const produitTrouve = produits.find((p) => p.code_barre === code)
+
+    if (produitTrouve) {
+      setRecherche(produitTrouve.nom)
+
+      setTimeout(() => {
+        refsQuantite.current[produitTrouve.id]?.focus()
+        refsQuantite.current[produitTrouve.id]?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        })
+      }, 100)
+    } else {
+      alert(
+        `Aucun produit ne correspond à ce code-barres (${code}).\n\nVous pouvez l'associer à un produit existant via "Modifier les infos".`
+      )
+    }
+  }
+
+  const produitsFiltres = produits.filter((p) =>
+    recherche.trim() === ""
+      ? true
+      : p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
+  )
 
   if (chargement) {
     return <div className="p-8">Chargement des produits...</div>
@@ -343,6 +396,24 @@ export default function StockPage() {
             className="border rounded p-2 w-32"
           />
 
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              placeholder="Code-barres (optionnel)"
+              value={nouveauCodeBarre}
+              onChange={(e) => setNouveauCodeBarre(e.target.value)}
+              className="border rounded p-2 w-40"
+            />
+            <button
+              type="button"
+              onClick={() => setScannerOuvert("nouveau")}
+              className="border rounded p-2"
+              title="Scanner le code-barres"
+            >
+              📷
+            </button>
+          </div>
+
           <input
             type="file"
             accept="image/*"
@@ -360,8 +431,29 @@ export default function StockPage() {
         </div>
       </form>
 
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="🔍 Rechercher un produit..."
+          className="flex-1 border rounded-lg p-3 outline-none focus:ring-2"
+        />
+
+        <button
+          onClick={() => setScannerOuvert("filtrer")}
+          className="bg-black text-white px-4 py-2 rounded-lg"
+        >
+          📷 Scanner
+        </button>
+      </div>
+
+      {produitsFiltres.length === 0 && (
+        <p className="text-gray-600">Aucun produit ne correspond à votre recherche.</p>
+      )}
+
       <div className="space-y-3">
-        {produits.map((produit) => (
+        {produitsFiltres.map((produit) => (
           <div
             key={produit.id}
             className={`border p-4 rounded-xl shadow-sm ${
@@ -396,6 +488,24 @@ export default function StockPage() {
                     placeholder="Prix (€)"
                     className="border rounded p-2 w-28"
                   />
+
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={editCodeBarre}
+                      onChange={(e) => setEditCodeBarre(e.target.value)}
+                      placeholder="Code-barres"
+                      className="border rounded p-2 w-40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setScannerOuvert("edition")}
+                      className="border rounded p-2"
+                      title="Scanner le code-barres"
+                    >
+                      📷
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -442,6 +552,11 @@ export default function StockPage() {
                     <p className="text-sm text-gray-500">
                       Stock actuel : {produit.stock} · Prix : {produit.prix != null ? produit.prix.toFixed(2) + " €" : "non défini"}
                     </p>
+                    {produit.code_barre && (
+                      <p className="text-xs text-gray-400">
+                        Code-barres : {produit.code_barre}
+                      </p>
+                    )}
 
                     <div className="flex gap-3 mt-1">
                       <label className="text-xs text-blue-600 underline cursor-pointer">
@@ -476,6 +591,7 @@ export default function StockPage() {
 
                 <div className="flex items-center gap-2 flex-wrap justify-end">
                   <input
+                    ref={(el) => { refsQuantite.current[produit.id] = el }}
                     type="number"
                     min="1"
                     placeholder="Quantité reçue"
@@ -518,6 +634,13 @@ export default function StockPage() {
           </div>
         ))}
       </div>
+
+      {scannerOuvert && (
+        <BarcodeScanner
+          onScan={gererScan}
+          onClose={() => setScannerOuvert(null)}
+        />
+      )}
     </main>
   )
 }

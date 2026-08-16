@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 export async function POST(request: Request) {
   try {
-    const { nom, categorie, prix, stock, imageUrl } = await request.json()
+    const { nom, categorie, prix, stock, imageUrl, codeBarre } = await request.json()
 
     if (!nom || prix === undefined || prix === null) {
       return NextResponse.json(
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
         stock: stock || 0,
         disponible: true,
         image_url: imageUrl || null,
+        code_barre: codeBarre || null,
       })
       .select()
       .single()

@@ -24,6 +24,7 @@ export default function Home() {
   const [panierOuvert, setPanierOuvert] = useState(false);
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [categorieSelectionnee, setCategorieSelectionnee] = useState("Tous");
+  const [recherche, setRecherche] = useState("");
 
   const [clientNom, setClientNom] = useState("");
   const [clientTelephone, setClientTelephone] = useState("");
@@ -35,7 +36,6 @@ export default function Home() {
   const [messageErreur, setMessageErreur] = useState<string | null>(null);
   const [commandeValidee, setCommandeValidee] = useState<number | null>(null);
 
-  // Charger les produits depuis Supabase
   useEffect(() => {
     async function fetchProduits() {
       const { data, error } = await supabase
@@ -53,7 +53,6 @@ export default function Home() {
     fetchProduits();
   }, []);
 
-  // Liste des catégories disponibles (à partir des produits chargés)
   const categories = [
     "Tous",
     ...Array.from(
@@ -65,13 +64,16 @@ export default function Home() {
     ),
   ];
 
-  // Produits filtrés selon la catégorie sélectionnée
-  const produitsFiltres =
-    categorieSelectionnee === "Tous"
-      ? produits
-      : produits.filter((p) => p.categorie === categorieSelectionnee);
+  const produitsFiltres = produits
+    .filter((p) =>
+      categorieSelectionnee === "Tous" ? true : p.categorie === categorieSelectionnee
+    )
+    .filter((p) =>
+      recherche.trim() === ""
+        ? true
+        : p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
+    );
 
-  // Ajouter un produit au panier
   function ajouterAuPanier(produit: Produit) {
     setCart((panierActuel) => {
       const produitExistant = panierActuel.find(
@@ -98,7 +100,6 @@ export default function Home() {
     });
   }
 
-  // Augmenter la quantité
   function augmenterQuantite(produitId: number) {
     setCart((panierActuel) =>
       panierActuel.map((item) => {
@@ -118,7 +119,6 @@ export default function Home() {
     );
   }
 
-  // Diminuer la quantité
   function diminuerQuantite(produitId: number) {
     setCart((panierActuel) =>
       panierActuel
@@ -136,102 +136,89 @@ export default function Home() {
     );
   }
 
-  // Nombre total d'articles
   const nombreArticles = cart.reduce(
     (total, item) => total + item.quantite,
     0
   );
 
-  // Total du panier
   const totalPanier = cart.reduce(
     (total, item) => total + item.produit.prix * item.quantite,
     0
   );
 
-  // Valider la commande
-async function validerCommande() {
-  setMessageErreur(null);
+  async function validerCommande() {
+    setMessageErreur(null);
 
-  if (!clientNom.trim()) {
-    setMessageErreur("Merci de renseigner votre nom et prénom.");
-    return;
+    if (!clientNom.trim()) {
+      setMessageErreur("Merci de renseigner votre nom et prénom.");
+      return;
+    }
+
+    if (!clientTelephone.trim()) {
+      setMessageErreur("Merci de renseigner votre numéro de téléphone.");
+      return;
+    }
+
+    if (!dateRetrait) {
+      setMessageErreur("Merci de choisir une date de retrait.");
+      return;
+    }
+
+    if (cart.length === 0) {
+      setMessageErreur("Votre panier est vide.");
+      return;
+    }
+
+    setEnvoiEnCours(true);
+
+    try {
+      const lignesCommande = cart.map((item) => ({
+        produit_id: item.produit.id,
+        quantite: item.quantite,
+        prix_unitaire: item.produit.prix,
+      }));
+
+      const reponse = await fetch("/api/commande", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clientNom: clientNom.trim(),
+          clientTelephone: clientTelephone.trim(),
+          dateRetrait: dateRetrait,
+          clientRemarque: clientRemarque.trim() || null,
+          total: totalPanier,
+          lignes: lignesCommande,
+        }),
+      });
+
+      const resultat = await reponse.json();
+
+      if (!reponse.ok || !resultat.success) {
+        throw new Error(resultat.message || "Erreur lors de la création de la commande.");
+      }
+
+      const commandeId = resultat.commandeId;
+
+      setCommandeValidee(Number(commandeId));
+      setCart([]);
+      setFormulaireOuvert(false);
+      setPanierOuvert(false);
+      setClientNom("");
+      setClientTelephone("");
+      setDateRetrait("");
+      setClientRemarque("");
+    } catch (err) {
+      setMessageErreur(
+        err instanceof Error
+          ? err.message
+          : "Une erreur est survenue lors de la commande."
+      );
+    } finally {
+      setEnvoiEnCours(false);
+    }
   }
-
-  if (!clientTelephone.trim()) {
-    setMessageErreur("Merci de renseigner votre numéro de téléphone.");
-    return;
-  }
-
-  if (!dateRetrait) {
-  setMessageErreur("Merci de choisir une date de retrait.");
-  return;
-}
-
-  if (cart.length === 0) {
-    setMessageErreur("Votre panier est vide.");
-    return;
-  }
-
-  setEnvoiEnCours(true);
-
-  try {
-    // Préparer les produits du panier
-    const lignesCommande = cart.map((item) => ({
-      produit_id: item.produit.id,
-      quantite: item.quantite,
-      prix_unitaire: item.produit.prix,
-    }));
-
-    // Envoyer toute la commande à Supabase
-    const reponse = await fetch("/api/commande", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    clientNom: clientNom.trim(),
-    clientTelephone: clientTelephone.trim(),
-    dateRetrait: dateRetrait,
-    clientRemarque: clientRemarque.trim() || null,
-    total: totalPanier,
-    lignes: lignesCommande,
-  }),
-});
-
-const resultat = await reponse.json();
-
-if (!reponse.ok || !resultat.success) {
-  throw new Error(resultat.message || "Erreur lors de la création de la commande.");
-}
-
-const commandeId = resultat.commandeId;
-
-    // Afficher la confirmation
-    setCommandeValidee(Number(commandeId));
-
-    // Vider le panier
-    setCart([]);
-
-    // Fermer les fenêtres
-    setFormulaireOuvert(false);
-    setPanierOuvert(false);
-
-    // Réinitialiser le formulaire
-    setClientNom("");
-    setClientTelephone("");
-    setDateRetrait("");
-    setClientRemarque("");
-
-  } catch (err) {
-    setMessageErreur(
-      err instanceof Error
-        ? err.message
-        : "Une erreur est survenue lors de la commande."
-    );
-  } finally {
-    setEnvoiEnCours(false);
-  }
-}
 
   if (error) {
     return <div>Erreur : {error}</div>;
@@ -241,7 +228,6 @@ const commandeId = resultat.commandeId;
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl">
 
-        {/* En-tête */}
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-3xl font-bold">
             🛍️ DI Shop
@@ -255,7 +241,6 @@ const commandeId = resultat.commandeId;
           </button>
         </div>
 
-        {/* Message de confirmation */}
         {commandeValidee !== null && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-5">
             <h2 className="text-xl font-bold text-green-800">
@@ -276,7 +261,17 @@ const commandeId = resultat.commandeId;
           </div>
         )}
 
-        {/* Filtres par catégorie */}
+        {/* Barre de recherche */}
+        <div className="mb-4">
+          <input
+            type="text"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="🔍 Rechercher un produit..."
+            className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
+          />
+        </div>
+
         {categories.length > 1 && (
           <div className="mb-6 flex flex-wrap gap-2">
             {categories.map((categorie) => (
@@ -295,7 +290,10 @@ const commandeId = resultat.commandeId;
           </div>
         )}
 
-        {/* Produits */}
+        {produitsFiltres.length === 0 && (
+          <p className="text-gray-600">Aucun produit ne correspond à votre recherche.</p>
+        )}
+
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {produitsFiltres.map((produit) => {
             const itemPanier = cart.find(
@@ -309,7 +307,6 @@ const commandeId = resultat.commandeId;
                 key={produit.id}
                 className="flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md"
               >
-                {/* Image */}
                 <div className="flex h-56 items-center justify-center bg-white p-4">
                   <img
                     src={produit.image_url}
@@ -318,7 +315,6 @@ const commandeId = resultat.commandeId;
                   />
                 </div>
 
-                {/* Informations */}
                 <div className="flex flex-1 flex-col p-5">
 
                   <h2 className="text-xl font-bold">
@@ -333,7 +329,6 @@ const commandeId = resultat.commandeId;
                     {produit.prix.toFixed(2)} €
                   </p>
 
-                  {/* Quantité */}
                   {quantite > 0 && (
                     <div className="mt-4 flex items-center justify-center gap-4">
                       <button
@@ -357,7 +352,6 @@ const commandeId = resultat.commandeId;
                     </div>
                   )}
 
-                  {/* Ajouter */}
                   {quantite === 0 && (
                     <button
                       onClick={() => ajouterAuPanier(produit)}
@@ -374,7 +368,6 @@ const commandeId = resultat.commandeId;
           })}
         </div>
 
-        {/* Panier */}
         {panierOuvert && (
           <div className="fixed inset-0 z-50 bg-black/40">
 
@@ -485,7 +478,6 @@ const commandeId = resultat.commandeId;
           </div>
         )}
 
-        {/* Formulaire */}
         {formulaireOuvert && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
 
@@ -537,17 +529,17 @@ const commandeId = resultat.commandeId;
                 </div>
 
                 <div>
-  <label className="mb-1 block font-semibold">
-    Date de retrait souhaitée *
-  </label>
+                  <label className="mb-1 block font-semibold">
+                    Date de retrait souhaitée *
+                  </label>
 
-  <input
-    type="date"
-    value={dateRetrait}
-    onChange={(e) => setDateRetrait(e.target.value)}
-    className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
-  />
-</div>
+                  <input
+                    type="date"
+                    value={dateRetrait}
+                    onChange={(e) => setDateRetrait(e.target.value)}
+                    className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
+                  />
+                </div>
 
                 <div>
                   <label className="mb-1 block font-semibold">
@@ -565,7 +557,6 @@ const commandeId = resultat.commandeId;
                   />
                 </div>
 
-                {/* Erreur */}
                 {messageErreur && (
                   <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
                     ⚠️ {messageErreur}
