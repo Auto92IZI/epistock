@@ -26,8 +26,7 @@ export default function LoginPage() {
     setChargement(false)
 
     if (data.success) {
-      router.push("/admin")
-      router.refresh()
+      window.location.href = "/admin"
     } else {
       setErreur("Mot de passe incorrect")
     }
