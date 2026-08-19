@@ -79,6 +79,7 @@ export default function AdminPage() {
           )
         )
       `)
+      .neq("statut", "Récupérée")
       .order("date_retrait", { ascending: true })
 
 
@@ -281,7 +282,9 @@ Merci.`
     }
 
     const res = await fetch(`/api/commandes/${commandeId}`, {
-      method: "DELETE",
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ statut: "Récupérée" }),
     })
 
     const data = await res.json()
@@ -291,7 +294,7 @@ Merci.`
         anciennes.filter((commande) => commande.id !== commandeId)
       )
     } else {
-      alert("Erreur lors de la suppression de la commande")
+      alert("Erreur lors de l'archivage de la commande")
     }
 
   }
@@ -333,6 +336,9 @@ Merci.`
         </h1>
 
         <div className="flex items-center gap-4">
+          <Link href="/admin/dashboard" className="text-sm text-blue-600 underline">
+            Tableau de bord
+          </Link>
           <Link href="/admin/stock" className="text-sm text-blue-600 underline">
             Gérer le stock
           </Link>
