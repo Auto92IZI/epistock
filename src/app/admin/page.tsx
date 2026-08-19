@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
+import { urlBase64ToUint8Array } from "@/lib/pushClient"
 
 
 type Produit = {
@@ -41,11 +42,93 @@ export default function AdminPage() {
 
   const [commandes, setCommandes] = useState<Commande[]>([])
   const [chargement, setChargement] = useState(true)
+  const [commandeSurlignee, setCommandeSurlignee] = useState<number | null>(null)
+  const [statutNotifs, setStatutNotifs] = useState<"inactif" | "actif" | "refuse" | "non_supporte">("inactif")
 
 
   useEffect(() => {
     chargerCommandes()
+    verifierStatutNotifications()
   }, [])
+
+
+  useEffect(() => {
+    if (commandes.length === 0) return
+
+    const params = new URLSearchParams(window.location.search)
+    const idParam = params.get("commande")
+
+    if (idParam) {
+      const id = Number(idParam)
+      setCommandeSurlignee(id)
+
+      setTimeout(() => {
+        document
+          .getElementById(`commande-${id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" })
+      }, 150)
+
+      setTimeout(() => {
+        setCommandeSurlignee(null)
+      }, 5000)
+    }
+  }, [commandes])
+
+
+  async function verifierStatutNotifications() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setStatutNotifs("non_supporte")
+      return
+    }
+
+    if (Notification.permission === "denied") {
+      setStatutNotifs("refuse")
+      return
+    }
+
+    const registration = await navigator.serviceWorker.ready
+    const subscription = await registration.pushManager.getSubscription()
+
+    setStatutNotifs(subscription ? "actif" : "inactif")
+  }
+
+
+  async function activerNotifications() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      alert("Les notifications ne sont pas prises en charge par ce navigateur.")
+      return
+    }
+
+    const permission = await Notification.requestPermission()
+
+    if (permission !== "granted") {
+      setStatutNotifs("refuse")
+      return
+    }
+
+    const registration = await navigator.serviceWorker.ready
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY as string
+      ),
+    })
+
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(subscription),
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      setStatutNotifs("actif")
+    } else {
+      alert("Erreur lors de l'activation des notifications")
+    }
+  }
 
 
 
@@ -226,7 +309,7 @@ export default function AdminPage() {
     const message =
 `Bonjour ${commande.client_nom},
 
-Votre commande DI Shop est prête.
+Votre commande EpiStock est prête.
 
 Vous pouvez venir la récupérer à la date prévue.
 
@@ -235,7 +318,6 @@ Merci.`
 
     let telephone = commande.client_telephone.replace(/\s/g, "")
 
-    // Conversion au format international attendu par WhatsApp
     if (telephone.startsWith("0")) {
       telephone = "33" + telephone.slice(1)
     } else if (telephone.startsWith("+")) {
@@ -259,8 +341,6 @@ Merci.`
     commande:Commande
   ){
 
-    // On ouvre WhatsApp tout de suite pour garder le geste de clic
-    // (nécessaire sur mobile pour que l'ouverture ne soit pas bloquée)
     prevenirClient(commande)
 
     mettreCommandePrete(commande.id)
@@ -274,7 +354,7 @@ Merci.`
   ){
 
     const confirmation = window.confirm(
-      "Confirmer que cette commande a été récupérée ? Elle sera supprimée de la liste."
+      "Confirmer que cette commande a été récupérée ? Elle sera archivée."
     )
 
     if(!confirmation){
@@ -329,13 +409,31 @@ Merci.`
     <main className="p-8 space-y-6">
 
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
 
         <h1 className="text-3xl font-bold">
-          Administration DI Shop
+          Administration EpiStock
         </h1>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
+
+          {statutNotifs === "inactif" && (
+            <button
+              onClick={activerNotifications}
+              className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-full"
+            >
+              🔔 Activer les notifications
+            </button>
+          )}
+
+          {statutNotifs === "actif" && (
+            <span className="text-sm text-green-700">🔔 Notifications actives</span>
+          )}
+
+          {statutNotifs === "refuse" && (
+            <span className="text-sm text-gray-400">🔕 Notifications refusées</span>
+          )}
+
           <Link href="/admin/dashboard" className="text-sm text-blue-600 underline">
             Tableau de bord
           </Link>
@@ -374,7 +472,11 @@ Merci.`
 
             key={commande.id}
 
-            className="border rounded-xl p-5 space-y-4 shadow-sm"
+            id={`commande-${commande.id}`}
+
+            className={`border rounded-xl p-5 space-y-4 shadow-sm transition ${
+              commandeSurlignee === commande.id ? "ring-4 ring-blue-400" : ""
+            }`}
 
           >
 

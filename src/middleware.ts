@@ -16,7 +16,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith("/api/stock") ||
     pathname.startsWith("/api/produits") ||
     pathname.startsWith("/api/upload") ||
-    pathname.startsWith("/api/commandes")
+    pathname.startsWith("/api/commandes") ||
+    pathname.startsWith("/api/push")
 
   if (routeProtegee) {
     const session = request.cookies.get("admin_session")
@@ -37,5 +38,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/stock/:path*", "/api/produits/:path*", "/api/upload/:path*", "/api/commandes/:path*"],
+  matcher: ["/admin/:path*", "/api/stock/:path*", "/api/produits/:path*", "/api/upload/:path*", "/api/commandes/:path*", "/api/push/:path*"],
 }

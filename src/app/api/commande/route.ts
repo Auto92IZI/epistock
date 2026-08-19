@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { Resend } from "resend";
+import webpush from "@/lib/webpush";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -107,6 +108,37 @@ Rendez-vous sur la page d'administration pour préparer la commande.`,
     } catch (erreurEmail) {
       console.log("ERREUR ENVOI EMAIL :", erreurEmail);
       // On ne bloque pas la commande si l'email échoue
+    }
+
+
+    // Envoi des notifications push
+    try {
+      const { data: abonnements } = await supabaseAdmin
+        .from("push_subscriptions")
+        .select("*");
+
+      const payload = JSON.stringify({
+        title: `Nouvelle commande #${commande.id}`,
+        body: `${clientNom} - ${total} €`,
+        url: `/admin?commande=${commande.id}`,
+      });
+
+      for (const abonnement of abonnements || []) {
+        try {
+          await webpush.sendNotification(abonnement.subscription, payload);
+        } catch (erreurEnvoi: any) {
+          if (erreurEnvoi.statusCode === 410 || erreurEnvoi.statusCode === 404) {
+            await supabaseAdmin
+              .from("push_subscriptions")
+              .delete()
+              .eq("endpoint", abonnement.endpoint);
+          } else {
+            console.log("ERREUR ENVOI PUSH :", erreurEnvoi);
+          }
+        }
+      }
+    } catch (erreurPush) {
+      console.log("ERREUR NOTIFICATIONS PUSH :", erreurPush);
     }
 
 
