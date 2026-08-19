@@ -1,6 +1,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Poppins, Inter } from "next/font/google"
+import IosInstallBanner from "@/components/IosInstallBanner"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -81,6 +82,7 @@ export default function HomePage() {
           <path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       </Link>
+      <IosInstallBanner />
     </main>
   )
 }
