@@ -117,10 +117,16 @@ Rendez-vous sur la page d'administration pour préparer la commande.`,
         .from("push_subscriptions")
         .select("*");
 
+      const { count: nombreActives } = await supabaseAdmin
+        .from("Commandes")
+        .select("id", { count: "exact", head: true })
+        .neq("statut", "Récupérée");
+
       const payload = JSON.stringify({
         title: `Nouvelle commande #${commande.id}`,
         body: `${clientNom} - ${total} €`,
         url: `/admin?commande=${commande.id}`,
+        badgeCount: nombreActives || 1,
       });
 
       for (const abonnement of abonnements || []) {

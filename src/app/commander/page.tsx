@@ -541,20 +541,8 @@ export default function Home() {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1 block font-semibold">
-                    Remarque
-                  </label>
-
-                  <textarea
-                    value={clientRemarque}
-                    onChange={(e) =>
-                      setClientRemarque(e.target.value)
-                    }
-                    placeholder="Précisions sur votre commande (optionnel)"
-                    rows={3}
-                    className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
-                  />
+                <div className="rounded-lg bg-gray-50 border p-3 text-sm text-gray-600">
+                  ℹ️ Nous ne proposons pas de livraison, uniquement du retrait en magasin. La date sélectionnée est indicative : la date et l'heure exactes de disponibilité vous seront communiquées par message dès que votre commande sera prête.
                 </div>
 
                 {messageErreur && (

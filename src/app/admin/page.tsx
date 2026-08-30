@@ -191,6 +191,19 @@ export default function AdminPage() {
     setCommandes(commandesPreparees)
 
     setChargement(false)
+
+    if ("setAppBadge" in navigator) {
+      try {
+        const actives = commandesPreparees.filter((c: any) => c.statut !== "Récupérée").length
+        if (actives > 0) {
+          (navigator as any).setAppBadge(actives)
+        } else {
+          (navigator as any).clearAppBadge()
+        }
+      } catch (e) {
+        // Non supporté, on ignore
+      }
+    }
   }
 
 
@@ -574,6 +587,14 @@ Merci.`
                     />
 
 
+
+                    {ligne.produit?.image_url && (
+                      <img
+                        src={ligne.produit.image_url}
+                        alt={ligne.produit.nom}
+                        className="w-12 h-12 object-contain border rounded"
+                      />
+                    )}
 
                     <div>
 

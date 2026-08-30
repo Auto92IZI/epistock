@@ -16,15 +16,36 @@ type Produit = {
   code_barre: string | null
 }
 
+const OPTION_NOUVELLE_CATEGORIE = "__nouvelle__"
+
+function IconeAppareilPhoto() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  )
+}
+
+function IconeCodeBarre() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M4 5v14" /><path d="M8 5v14" /><path d="M11 5v14" /><path d="M15 5v14" /><path d="M18 5v14" /><path d="M21 5v14" />
+    </svg>
+  )
+}
+
 export default function StockPage() {
   const [produits, setProduits] = useState<Produit[]>([])
   const [chargement, setChargement] = useState(true)
   const [quantites, setQuantites] = useState<{ [id: number]: string }>({})
   const [messageStatut, setMessageStatut] = useState<{ [id: number]: string }>({})
   const [recherche, setRecherche] = useState("")
+  const [filtreDisponibilite, setFiltreDisponibilite] = useState<"tous" | "actifs" | "pause">("tous")
 
   const [nouveauNom, setNouveauNom] = useState("")
   const [nouvelleCategorie, setNouvelleCategorie] = useState("")
+  const [nouvelleCategoriePerso, setNouvelleCategoriePerso] = useState("")
   const [nouveauPrix, setNouveauPrix] = useState("")
   const [nouveauStock, setNouveauStock] = useState("")
   const [nouveauCodeBarre, setNouveauCodeBarre] = useState("")
@@ -36,6 +57,7 @@ export default function StockPage() {
   const [produitEnEdition, setProduitEnEdition] = useState<number | null>(null)
   const [editNom, setEditNom] = useState("")
   const [editCategorie, setEditCategorie] = useState("")
+  const [editCategoriePerso, setEditCategoriePerso] = useState("")
   const [editPrix, setEditPrix] = useState("")
   const [editCodeBarre, setEditCodeBarre] = useState("")
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false)
@@ -43,6 +65,8 @@ export default function StockPage() {
   const [scannerOuvert, setScannerOuvert] = useState<"filtrer" | "nouveau" | "edition" | null>(null)
 
   const refsQuantite = useRef<{ [id: number]: HTMLInputElement | null }>({})
+  const refInputPhotoNouveau = useRef<HTMLInputElement | null>(null)
+  const refsInputPhotoExistant = useRef<{ [id: number]: HTMLInputElement | null }>({})
 
   useEffect(() => {
     chargerProduits()
@@ -65,6 +89,14 @@ export default function StockPage() {
     setProduits(data as Produit[])
     setChargement(false)
   }
+
+  const categoriesExistantes = Array.from(
+    new Set(
+      produits
+        .map((p) => p.categorie)
+        .filter((c): c is string => !!c && c.trim() !== "")
+    )
+  ).sort()
 
   async function uploaderPhoto(fichier: File): Promise<string | null> {
     const formData = new FormData()
@@ -202,6 +234,7 @@ export default function StockPage() {
     setProduitEnEdition(produit.id)
     setEditNom(produit.nom)
     setEditCategorie(produit.categorie || "")
+    setEditCategoriePerso("")
     setEditPrix(produit.prix.toString())
     setEditCodeBarre(produit.code_barre || "")
   }
@@ -215,6 +248,9 @@ export default function StockPage() {
       return
     }
 
+    const categorieFinale =
+      editCategorie === OPTION_NOUVELLE_CATEGORIE ? editCategoriePerso.trim() : editCategorie
+
     setEnregistrementEnCours(true)
 
     const res = await fetch(`/api/produits/${produitId}`, {
@@ -222,7 +258,7 @@ export default function StockPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         nom: editNom.trim(),
-        categorie: editCategorie || null,
+        categorie: categorieFinale || null,
         prix: parseFloat(editPrix),
         codeBarre: editCodeBarre.trim() || null,
       }),
@@ -239,7 +275,7 @@ export default function StockPage() {
             ? {
                 ...p,
                 nom: editNom.trim(),
-                categorie: editCategorie || null,
+                categorie: categorieFinale || null,
                 prix: parseFloat(editPrix),
                 code_barre: editCodeBarre.trim() || null,
               }
@@ -259,6 +295,9 @@ export default function StockPage() {
       return
     }
 
+    const categorieFinale =
+      nouvelleCategorie === OPTION_NOUVELLE_CATEGORIE ? nouvelleCategoriePerso.trim() : nouvelleCategorie
+
     setAjoutEnCours(true)
 
     let imageUrl: string | null = null
@@ -272,7 +311,7 @@ export default function StockPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         nom: nouveauNom,
-        categorie: nouvelleCategorie || null,
+        categorie: categorieFinale || null,
         prix: parseFloat(nouveauPrix),
         stock: parseInt(nouveauStock || "0", 10),
         imageUrl,
@@ -290,6 +329,7 @@ export default function StockPage() {
       )
       setNouveauNom("")
       setNouvelleCategorie("")
+      setNouvelleCategoriePerso("")
       setNouveauPrix("")
       setNouveauStock("")
       setNouveauCodeBarre("")
@@ -312,7 +352,6 @@ export default function StockPage() {
       return
     }
 
-    // Mode "filtrer" : on cherche le produit correspondant
     const produitTrouve = produits.find((p) => p.code_barre === code)
 
     if (produitTrouve) {
@@ -332,11 +371,17 @@ export default function StockPage() {
     }
   }
 
-  const produitsFiltres = produits.filter((p) =>
-    recherche.trim() === ""
-      ? true
-      : p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
-  )
+  const produitsFiltres = produits
+    .filter((p) =>
+      recherche.trim() === ""
+        ? true
+        : p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
+    )
+    .filter((p) => {
+      if (filtreDisponibilite === "actifs") return p.disponible
+      if (filtreDisponibilite === "pause") return !p.disponible
+      return true
+    })
 
   if (chargement) {
     return <div className="p-8">Chargement des produits...</div>
@@ -368,13 +413,27 @@ export default function StockPage() {
             required
           />
 
-          <input
-            type="text"
-            placeholder="Catégorie (optionnel)"
+          <select
             value={nouvelleCategorie}
             onChange={(e) => setNouvelleCategorie(e.target.value)}
             className="border rounded p-2 flex-1 min-w-[150px]"
-          />
+          >
+            <option value="">Sans catégorie</option>
+            {categoriesExistantes.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+            <option value={OPTION_NOUVELLE_CATEGORIE}>+ Nouvelle catégorie...</option>
+          </select>
+
+          {nouvelleCategorie === OPTION_NOUVELLE_CATEGORIE && (
+            <input
+              type="text"
+              placeholder="Nom de la nouvelle catégorie"
+              value={nouvelleCategoriePerso}
+              onChange={(e) => setNouvelleCategoriePerso(e.target.value)}
+              className="border rounded p-2 flex-1 min-w-[150px]"
+            />
+          )}
 
           <input
             type="number"
@@ -407,18 +466,28 @@ export default function StockPage() {
             <button
               type="button"
               onClick={() => setScannerOuvert("nouveau")}
-              className="border rounded p-2"
+              className="border rounded p-2 text-gray-600 hover:bg-gray-50"
               title="Scanner le code-barres"
             >
-              📷
+              <IconeCodeBarre />
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={() => refInputPhotoNouveau.current?.click()}
+            className="border rounded p-2 text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+            title="Ajouter une photo"
+          >
+            <IconeAppareilPhoto />
+            {nouvellePhoto ? "Photo choisie ✓" : "Photo"}
+          </button>
           <input
+            ref={refInputPhotoNouveau}
             type="file"
             accept="image/*"
             onChange={(e) => setNouvellePhoto(e.target.files?.[0] || null)}
-            className="text-sm"
+            className="hidden"
           />
 
           <button
@@ -431,21 +500,40 @@ export default function StockPage() {
         </div>
       </form>
 
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={recherche}
-          onChange={(e) => setRecherche(e.target.value)}
-          placeholder="🔍 Rechercher un produit..."
-          className="flex-1 border rounded-lg p-3 outline-none focus:ring-2"
-        />
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="🔍 Rechercher un produit..."
+            className="flex-1 border rounded-lg p-3 outline-none focus:ring-2"
+          />
 
-        <button
-          onClick={() => setScannerOuvert("filtrer")}
-          className="bg-black text-white px-4 py-2 rounded-lg"
-        >
-          📷 Scanner
-        </button>
+          <button
+            onClick={() => setScannerOuvert("filtrer")}
+            className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            <IconeCodeBarre />
+            Scanner
+          </button>
+        </div>
+
+        <div className="flex gap-2">
+          {(["tous", "actifs", "pause"] as const).map((valeur) => (
+            <button
+              key={valeur}
+              onClick={() => setFiltreDisponibilite(valeur)}
+              className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                filtreDisponibilite === valeur
+                  ? "bg-black text-white"
+                  : "bg-white border text-gray-700"
+              }`}
+            >
+              {valeur === "tous" ? "Tous" : valeur === "actifs" ? "Actifs" : "En pause"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {produitsFiltres.length === 0 && (
@@ -471,13 +559,27 @@ export default function StockPage() {
                     className="border rounded p-2 flex-1 min-w-[150px]"
                   />
 
-                  <input
-                    type="text"
+                  <select
                     value={editCategorie}
                     onChange={(e) => setEditCategorie(e.target.value)}
-                    placeholder="Catégorie"
                     className="border rounded p-2 flex-1 min-w-[150px]"
-                  />
+                  >
+                    <option value="">Sans catégorie</option>
+                    {categoriesExistantes.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value={OPTION_NOUVELLE_CATEGORIE}>+ Nouvelle catégorie...</option>
+                  </select>
+
+                  {editCategorie === OPTION_NOUVELLE_CATEGORIE && (
+                    <input
+                      type="text"
+                      placeholder="Nom de la nouvelle catégorie"
+                      value={editCategoriePerso}
+                      onChange={(e) => setEditCategoriePerso(e.target.value)}
+                      className="border rounded p-2 flex-1 min-w-[150px]"
+                    />
+                  )}
 
                   <input
                     type="number"
@@ -500,10 +602,10 @@ export default function StockPage() {
                     <button
                       type="button"
                       onClick={() => setScannerOuvert("edition")}
-                      className="border rounded p-2"
+                      className="border rounded p-2 text-gray-600 hover:bg-gray-50"
                       title="Scanner le code-barres"
                     >
-                      📷
+                      <IconeCodeBarre />
                     </button>
                   </div>
                 </div>
@@ -551,6 +653,7 @@ export default function StockPage() {
                     </p>
                     <p className="text-sm text-gray-500">
                       Stock actuel : {produit.stock} · Prix : {produit.prix != null ? produit.prix.toFixed(2) + " €" : "non défini"}
+                      {produit.categorie && ` · ${produit.categorie}`}
                     </p>
                     {produit.code_barre && (
                       <p className="text-xs text-gray-400">
@@ -558,26 +661,32 @@ export default function StockPage() {
                       </p>
                     )}
 
-                    <div className="flex gap-3 mt-1">
-                      <label className="text-xs text-blue-600 underline cursor-pointer">
+                    <div className="flex gap-3 mt-1 items-center">
+                      <button
+                        onClick={() => refsInputPhotoExistant.current[produit.id]?.click()}
+                        disabled={photoEnCours[produit.id]}
+                        className="text-xs text-blue-600 flex items-center gap-1"
+                        title={produit.image_url ? "Changer la photo" : "Ajouter une photo"}
+                      >
+                        <IconeAppareilPhoto />
                         {photoEnCours[produit.id]
                           ? "Envoi..."
                           : produit.image_url
                           ? "Changer la photo"
                           : "Ajouter une photo"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          disabled={photoEnCours[produit.id]}
-                          onChange={(e) => {
-                            const fichier = e.target.files?.[0]
-                            if (fichier) {
-                              changerPhoto(produit.id, fichier)
-                            }
-                          }}
-                        />
-                      </label>
+                      </button>
+                      <input
+                        ref={(el) => { refsInputPhotoExistant.current[produit.id] = el }}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const fichier = e.target.files?.[0]
+                          if (fichier) {
+                            changerPhoto(produit.id, fichier)
+                          }
+                        }}
+                      />
 
                       <button
                         onClick={() => ouvrirEdition(produit)}
