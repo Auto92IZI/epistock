@@ -392,6 +392,10 @@ export default function StockPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Gestion du stock</h1>
 
+        <Link href="/commander" className="text-sm text-gray-600 underline">
+          Voir la boutique
+        </Link>
+
         <Link href="/admin" className="text-sm text-blue-600 underline">
           Retour aux commandes
         </Link>

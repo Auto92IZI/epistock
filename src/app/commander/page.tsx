@@ -228,17 +228,30 @@ export default function Home() {
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl">
 
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between gap-3">
           <h1 className="text-3xl font-bold">
             🛍️ DI Shop
           </h1>
 
-          <button
-            onClick={() => setPanierOuvert(true)}
-            className="rounded-full bg-black px-5 py-3 font-semibold text-white shadow-md transition hover:bg-gray-800"
-          >
-            🛒 Panier : {nombreArticles} article(s)
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="/admin"
+              aria-label="Administration"
+              className="opacity-30 hover:opacity-70 transition-opacity p-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </a>
+
+            <button
+              onClick={() => setPanierOuvert(true)}
+              className="rounded-full bg-black px-5 py-3 font-semibold text-white shadow-md transition hover:bg-gray-800"
+            >
+              🛒 Panier : {nombreArticles} article(s)
+            </button>
+          </div>
         </div>
 
         {commandeValidee !== null && (
@@ -485,7 +498,7 @@ export default function Home() {
 
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-2xl font-bold">
-                  📦 Informations de livraison
+                  📦 Informations de commande
                 </h2>
 
                 <button
@@ -542,7 +555,7 @@ export default function Home() {
                 </div>
 
                 <div className="rounded-lg bg-gray-50 border p-3 text-sm text-gray-600">
-                  ℹ️ Nous ne proposons pas de livraison, uniquement du retrait en magasin. La date sélectionnée est indicative : la date et l'heure exactes de disponibilité vous seront communiquées par message dès que votre commande sera prête.
+                  ℹ️ Nous ne proposons pas de livraison, uniquement du retrait. La date sélectionnée est indicative : la date et l'heure exactes de disponibilité vous seront communiquées par message dès que votre commande sera prête.
                 </div>
 
                 {messageErreur && (

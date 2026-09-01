@@ -425,7 +425,7 @@ Merci.`
       <div className="flex items-center justify-between flex-wrap gap-3">
 
         <h1 className="text-3xl font-bold">
-          Administration EpiStock
+          Administration DI Shop
         </h1>
 
         <div className="flex items-center gap-4 flex-wrap">
@@ -446,6 +446,10 @@ Merci.`
           {statutNotifs === "refuse" && (
             <span className="text-sm text-gray-400">🔕 Notifications refusées</span>
           )}
+
+          <Link href="/commander" className="text-sm text-gray-600 underline">
+            Voir la boutique
+          </Link>
 
           <Link href="/admin/dashboard" className="text-sm text-blue-600 underline">
             Tableau de bord
