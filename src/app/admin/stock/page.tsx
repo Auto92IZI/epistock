@@ -60,6 +60,7 @@ export default function StockPage() {
   const [editCategoriePerso, setEditCategoriePerso] = useState("")
   const [editPrix, setEditPrix] = useState("")
   const [editCodeBarre, setEditCodeBarre] = useState("")
+  const [editStock, setEditStock] = useState("")
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false)
 
   const [scannerOuvert, setScannerOuvert] = useState<"filtrer" | "nouveau" | "edition" | null>(null)
@@ -237,6 +238,7 @@ export default function StockPage() {
     setEditCategoriePerso("")
     setEditPrix(produit.prix.toString())
     setEditCodeBarre(produit.code_barre || "")
+    setEditStock(produit.stock.toString())
   }
 
   function annulerEdition() {
@@ -261,6 +263,7 @@ export default function StockPage() {
         categorie: categorieFinale || null,
         prix: parseFloat(editPrix),
         codeBarre: editCodeBarre.trim() || null,
+        stock: editStock !== "" ? parseInt(editStock, 10) : undefined,
       }),
     })
 
@@ -278,6 +281,7 @@ export default function StockPage() {
                 categorie: categorieFinale || null,
                 prix: parseFloat(editPrix),
                 code_barre: editCodeBarre.trim() || null,
+                stock: editStock !== "" ? parseInt(editStock, 10) : p.stock,
               }
             : p
         )
@@ -593,6 +597,15 @@ export default function StockPage() {
                     onChange={(e) => setEditPrix(e.target.value)}
                     placeholder="Prix (€)"
                     className="border rounded p-2 w-28"
+                  />
+
+                  <input
+                    type="number"
+                    min="0"
+                    value={editStock}
+                    onChange={(e) => setEditStock(e.target.value)}
+                    placeholder="Stock"
+                    className="border rounded p-2 w-24"
                   />
 
                   <div className="flex items-center gap-1">
