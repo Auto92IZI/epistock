@@ -162,7 +162,7 @@ export default function AdminPage() {
           )
         )
       `)
-      .neq("statut", "Récupérée")
+      .not("statut", "in", '("Récupérée","Annulée")')
       .order("date_retrait", { ascending: true })
 
 
@@ -322,7 +322,7 @@ export default function AdminPage() {
     const message =
 `Bonjour ${commande.client_nom},
 
-Votre commande EpiStock est prête.
+Votre commande DI Shop est prête.
 
 Vous pouvez venir la récupérer à la date prévue.
 
@@ -388,6 +388,38 @@ Merci.`
       )
     } else {
       alert("Erreur lors de l'archivage de la commande")
+    }
+
+  }
+
+
+
+  async function annulerCommande(
+    commandeId:number
+  ){
+
+    const confirmation = window.confirm(
+      "Annuler cette commande ? Les produits seront remis en stock automatiquement."
+    )
+
+    if(!confirmation){
+      return
+    }
+
+    const res = await fetch(`/api/commandes/${commandeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ statut: "Annulée" }),
+    })
+
+    const data = await res.json()
+
+    if(data.success){
+      setCommandes((anciennes) =>
+        anciennes.filter((commande) => commande.id !== commandeId)
+      )
+    } else {
+      alert("Erreur lors de l'annulation de la commande")
     }
 
   }
@@ -707,6 +739,24 @@ Merci.`
               </button>
 
             }
+
+
+
+            <button
+
+              onClick={()=>
+                annulerCommande(
+                  commande.id
+                )
+              }
+
+              className="bg-red-100 text-red-700 px-4 py-2 rounded ml-2"
+
+            >
+
+              ❌ Annuler la commande
+
+            </button>
 
 
 
