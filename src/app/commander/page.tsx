@@ -64,6 +64,13 @@ export default function Home() {
     ),
   ];
 
+  function compterProduits(categorie: string) {
+    if (categorie === "Tous") {
+      return produits.length;
+    }
+    return produits.filter((p) => p.categorie === categorie).length;
+  }
+
   const produitsFiltres = produits
     .filter((p) =>
       categorieSelectionnee === "Tous" ? true : p.categorie === categorieSelectionnee
@@ -297,7 +304,7 @@ export default function Home() {
                     : "bg-white text-gray-700 border hover:bg-gray-100"
                 }`}
               >
-                {categorie}
+                {categorie} ({compterProduits(categorie)})
               </button>
             ))}
           </div>

@@ -528,19 +528,28 @@ export default function StockPage() {
         </div>
 
         <div className="flex gap-2">
-          {(["tous", "actifs", "pause"] as const).map((valeur) => (
-            <button
-              key={valeur}
-              onClick={() => setFiltreDisponibilite(valeur)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                filtreDisponibilite === valeur
-                  ? "bg-black text-white"
-                  : "bg-white border text-gray-700"
-              }`}
-            >
-              {valeur === "tous" ? "Tous" : valeur === "actifs" ? "Actifs" : "En pause"}
-            </button>
-          ))}
+          {(["tous", "actifs", "pause"] as const).map((valeur) => {
+            const compte =
+              valeur === "tous"
+                ? produits.length
+                : valeur === "actifs"
+                ? produits.filter((p) => p.disponible).length
+                : produits.filter((p) => !p.disponible).length
+
+            return (
+              <button
+                key={valeur}
+                onClick={() => setFiltreDisponibilite(valeur)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                  filtreDisponibilite === valeur
+                    ? "bg-black text-white"
+                    : "bg-white border text-gray-700"
+                }`}
+              >
+                {valeur === "tous" ? "Tous" : valeur === "actifs" ? "Actifs" : "En pause"} ({compte})
+              </button>
+            )
+          })}
         </div>
       </div>
 
