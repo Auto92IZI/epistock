@@ -99,22 +99,88 @@ export default function StockPage() {
     )
   ).sort()
 
-  async function uploaderPhoto(fichier: File): Promise<string | null> {
-    const formData = new FormData()
-    formData.append("fichier", fichier)
+  function compresserImage(fichier: File): Promise<File> {
+    return new Promise((resolve, reject) => {
+      const image = new Image()
+      const lecteur = new FileReader()
 
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
+      lecteur.onload = (e) => {
+        image.src = e.target?.result as string
+      }
+
+      image.onload = () => {
+        const tailleMax = 1600
+        let { width, height } = image
+
+        if (width > tailleMax || height > tailleMax) {
+          if (width > height) {
+            height = Math.round((height * tailleMax) / width)
+            width = tailleMax
+          } else {
+            width = Math.round((width * tailleMax) / height)
+            height = tailleMax
+          }
+        }
+
+        const canvas = document.createElement("canvas")
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext("2d")
+        ctx?.drawImage(image, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Compression impossible"))
+              return
+            }
+            resolve(new File([blob], fichier.name, { type: "image/jpeg" }))
+          },
+          "image/jpeg",
+          0.8
+        )
+      }
+
+      image.onerror = () => reject(new Error("Image invalide"))
+      lecteur.onerror = () => reject(new Error("Lecture du fichier impossible"))
+
+      lecteur.readAsDataURL(fichier)
     })
+  }
 
-    const data = await res.json()
+  async function uploaderPhoto(fichier: File): Promise<string | null> {
+    try {
+      const fichierCompresse = await compresserImage(fichier)
 
-    if (data.success) {
-      return data.imageUrl as string
+      const formData = new FormData()
+      formData.append("fichier", fichierCompresse)
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!res.ok) {
+        alert(
+          `Erreur lors de l'envoi de la photo (code ${res.status}). La photo est peut-être trop volumineuse.`
+        )
+        return null
+      }
+
+      const data = await res.json()
+
+      if (data.success) {
+        return data.imageUrl as string
+      }
+
+      alert(data.message || "Erreur lors de l'envoi de la photo")
+      return null
+    } catch (erreur) {
+      console.error("Erreur upload photo :", erreur)
+      alert("Erreur lors de l'envoi de la photo. Réessayez avec une photo plus légère.")
+      return null
     }
-
-    return null
   }
 
   function handleQuantiteChange(produitId: number, valeur: string) {
