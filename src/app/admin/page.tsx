@@ -567,6 +567,11 @@ Merci.`
                 }
 
 
+                <p className="font-semibold text-lg mt-1">
+                  Total : {Number(commande.total).toFixed(2)} €
+                </p>
+
+
               </div>
 
 
