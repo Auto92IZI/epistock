@@ -17,6 +17,8 @@ export async function PATCH(
       prix?: number
       code_barre?: string | null
       stock?: number
+      en_promo?: boolean
+      texte_promo?: string | null
     } = {}
 
     if (typeof body.disponible === "boolean") {
@@ -45,6 +47,14 @@ export async function PATCH(
 
     if (typeof body.stock === "number" && !isNaN(body.stock) && body.stock >= 0) {
       misAJour.stock = body.stock
+    }
+
+    if (typeof body.enPromo === "boolean") {
+      misAJour.en_promo = body.enPromo
+    }
+
+    if (body.textePromo !== undefined) {
+      misAJour.texte_promo = body.textePromo || null
     }
 
     const { error } = await supabaseAdmin

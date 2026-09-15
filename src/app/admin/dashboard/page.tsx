@@ -84,7 +84,8 @@ export default function DashboardPage() {
             Produits ( nom )
           )
         `)
-        .order("created_at", { ascending: true }),
+        .eq("interne", false)
+      .order("created_at", { ascending: true }),
       supabase
         .from("Produits")
         .select("id, nom, disponible, prix, stock"),

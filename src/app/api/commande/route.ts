@@ -16,7 +16,18 @@ export async function POST(request: Request) {
       clientRemarque,
       total,
       lignes,
+      codeInterne,
     } = body;
+
+    const estRetraitInterne =
+      !!codeInterne && codeInterne === process.env.CODE_RETRAIT_INTERNE;
+
+    if (codeInterne && !estRetraitInterne) {
+      return NextResponse.json(
+        { success: false, message: "Code interne incorrect" },
+        { status: 403 }
+      );
+    }
 
 
     // Création de la commande
@@ -24,12 +35,15 @@ export async function POST(request: Request) {
       await supabaseAdmin
         .from("Commandes")
         .insert({
-          client_nom: clientNom,
-          client_telephone: clientTelephone,
-          date_retrait: dateRetrait,
+          client_nom: estRetraitInterne ? "Retrait interne" : clientNom,
+          client_telephone: estRetraitInterne ? "0000000000" : clientTelephone,
+          date_retrait: estRetraitInterne
+            ? new Date().toISOString().split("T")[0]
+            : dateRetrait,
           client_remarque: clientRemarque || null,
-          total: total,
-          statut: "En attente",
+          total: estRetraitInterne ? 0 : total,
+          statut: estRetraitInterne ? "Récupérée" : "En attente",
+          interne: estRetraitInterne,
         })
         .select()
         .single();
@@ -77,8 +91,8 @@ export async function POST(request: Request) {
     }
 
 
-    // Envoi de l'email de notification
-    try {
+    // Envoi de l'email de notification (jamais pour un retrait interne)
+    if (!estRetraitInterne) try {
       const listeProduits = lignes
         .map(
           (ligne: any) =>
@@ -111,8 +125,8 @@ Rendez-vous sur la page d'administration pour préparer la commande.`,
     }
 
 
-    // Envoi des notifications push
-    try {
+    // Envoi des notifications push (jamais pour un retrait interne)
+    if (!estRetraitInterne) try {
       const { data: abonnements } = await supabaseAdmin
         .from("push_subscriptions")
         .select("*");

@@ -10,6 +10,9 @@ type Produit = {
   stock: number;
   prix: number;
   image_url: string;
+  created_at?: string;
+  en_promo?: boolean;
+  texte_promo?: string | null;
 };
 
 type PanierItem = {
@@ -35,6 +38,7 @@ export default function Home() {
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [messageErreur, setMessageErreur] = useState<string | null>(null);
   const [commandeValidee, setCommandeValidee] = useState<number | null>(null);
+  const [messageInterne, setMessageInterne] = useState(false);
 
   useEffect(() => {
     async function fetchProduits() {
@@ -52,6 +56,13 @@ export default function Home() {
 
     fetchProduits();
   }, []);
+
+  function estNouveau(produit: Produit) {
+    if (!produit.created_at) return false;
+    const diffJours =
+      (Date.now() - new Date(produit.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    return diffJours <= 30;
+  }
 
   const categories = [
     "Tous",
@@ -79,7 +90,12 @@ export default function Home() {
       recherche.trim() === ""
         ? true
         : p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
-    );
+    )
+    .sort((a, b) => {
+      if (a.en_promo && !b.en_promo) return -1;
+      if (!a.en_promo && b.en_promo) return 1;
+      return 0;
+    });
 
   function ajouterAuPanier(produit: Produit) {
     setCart((panierActuel) => {
@@ -209,6 +225,7 @@ export default function Home() {
       const commandeId = resultat.commandeId;
 
       setCommandeValidee(Number(commandeId));
+      setMessageInterne(false);
       setCart([]);
       setFormulaireOuvert(false);
       setPanierOuvert(false);
@@ -222,6 +239,54 @@ export default function Home() {
           ? err.message
           : "Une erreur est survenue lors de la commande."
       );
+    } finally {
+      setEnvoiEnCours(false);
+    }
+  }
+
+  async function validerRetraitInterne() {
+    if (cart.length === 0) {
+      return;
+    }
+
+    const code = window.prompt("Code de retrait interne :");
+
+    if (!code) {
+      return;
+    }
+
+    setEnvoiEnCours(true);
+    setMessageErreur(null);
+
+    try {
+      const lignesCommande = cart.map((item) => ({
+        produit_id: item.produit.id,
+        quantite: item.quantite,
+        prix_unitaire: item.produit.prix,
+      }));
+
+      const reponse = await fetch("/api/commande", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lignes: lignesCommande,
+          total: 0,
+          codeInterne: code,
+        }),
+      });
+
+      const resultat = await reponse.json();
+
+      if (!reponse.ok || !resultat.success) {
+        throw new Error(resultat.message || "Code incorrect ou erreur.");
+      }
+
+      setCommandeValidee(Number(resultat.commandeId));
+      setMessageInterne(true);
+      setCart([]);
+      setPanierOuvert(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erreur lors du retrait interne.");
     } finally {
       setEnvoiEnCours(false);
     }
@@ -261,7 +326,7 @@ export default function Home() {
           </div>
         </div>
 
-        {commandeValidee !== null && (
+        {commandeValidee !== null && !messageInterne && (
           <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-5">
             <h2 className="text-xl font-bold text-green-800">
               ✅ Votre commande a bien été prise en compte !
@@ -281,7 +346,17 @@ export default function Home() {
           </div>
         )}
 
-        {/* Barre de recherche */}
+        {commandeValidee !== null && messageInterne && (
+          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-5">
+            <h2 className="text-xl font-bold text-blue-800">
+              ✅ Retrait interne enregistré (#{commandeValidee})
+            </h2>
+            <p className="mt-1 text-blue-700 text-sm">
+              Le stock a été mis à jour.
+            </p>
+          </div>
+        )}
+
         <div className="mb-4">
           <input
             type="text"
@@ -325,8 +400,23 @@ export default function Home() {
             return (
               <div
                 key={produit.id}
-                className="flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md"
+                className={`relative flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md ${
+                  produit.en_promo ? "ring-2 ring-red-500" : ""
+                }`}
               >
+                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                  {produit.en_promo && (
+                    <span className="text-xs font-bold bg-red-600 text-white px-2 py-1 rounded-full shadow">
+                      🔥 {produit.texte_promo || "Promo"}
+                    </span>
+                  )}
+                  {estNouveau(produit) && (
+                    <span className="text-xs font-bold bg-blue-600 text-white px-2 py-1 rounded-full shadow">
+                      🆕 Nouveau
+                    </span>
+                  )}
+                </div>
+
                 <div className="flex h-56 items-center justify-center bg-white p-4">
                   <img
                     src={produit.image_url}
@@ -488,6 +578,14 @@ export default function Home() {
                       className="mt-6 w-full rounded-lg bg-black px-4 py-3 font-semibold text-white hover:bg-gray-800"
                     >
                       Passer la commande
+                    </button>
+
+                    <button
+                      onClick={validerRetraitInterne}
+                      disabled={envoiEnCours}
+                      className="mt-2 w-full text-xs text-gray-400 hover:text-gray-600 py-1"
+                    >
+                      Retrait de stock (interne)
                     </button>
 
                   </div>

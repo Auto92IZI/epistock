@@ -14,6 +14,8 @@ type Produit = {
   disponible: boolean
   image_url: string | null
   code_barre: string | null
+  en_promo: boolean
+  texte_promo: string | null
 }
 
 const OPTION_NOUVELLE_CATEGORIE = "__nouvelle__"
@@ -61,6 +63,8 @@ export default function StockPage() {
   const [editPrix, setEditPrix] = useState("")
   const [editCodeBarre, setEditCodeBarre] = useState("")
   const [editStock, setEditStock] = useState("")
+  const [editEnPromo, setEditEnPromo] = useState(false)
+  const [editTextePromo, setEditTextePromo] = useState("")
   const [enregistrementEnCours, setEnregistrementEnCours] = useState(false)
 
   const [scannerOuvert, setScannerOuvert] = useState<"filtrer" | "nouveau" | "edition" | null>(null)
@@ -78,7 +82,7 @@ export default function StockPage() {
 
     const { data, error } = await supabase
       .from("Produits")
-      .select("id, nom, categorie, prix, stock, disponible, image_url, code_barre")
+      .select("id, nom, categorie, prix, stock, disponible, image_url, code_barre, en_promo, texte_promo")
       .order("nom", { ascending: true })
 
     if (error) {
@@ -305,6 +309,8 @@ export default function StockPage() {
     setEditPrix(produit.prix.toString())
     setEditCodeBarre(produit.code_barre || "")
     setEditStock(produit.stock.toString())
+    setEditEnPromo(produit.en_promo || false)
+    setEditTextePromo(produit.texte_promo || "")
   }
 
   function annulerEdition() {
@@ -330,6 +336,8 @@ export default function StockPage() {
         prix: parseFloat(editPrix),
         codeBarre: editCodeBarre.trim() || null,
         stock: editStock !== "" ? parseInt(editStock, 10) : undefined,
+        enPromo: editEnPromo,
+        textePromo: editTextePromo.trim() || null,
       }),
     })
 
@@ -348,6 +356,8 @@ export default function StockPage() {
                 prix: parseFloat(editPrix),
                 code_barre: editCodeBarre.trim() || null,
                 stock: editStock !== "" ? parseInt(editStock, 10) : p.stock,
+                en_promo: editEnPromo,
+                texte_promo: editTextePromo.trim() || null,
               }
             : p
         )
@@ -683,6 +693,25 @@ export default function StockPage() {
                     className="border rounded p-2 w-24"
                   />
 
+                  <label className="flex items-center gap-2 text-sm border rounded p-2">
+                    <input
+                      type="checkbox"
+                      checked={editEnPromo}
+                      onChange={(e) => setEditEnPromo(e.target.checked)}
+                    />
+                    En promo
+                  </label>
+
+                  {editEnPromo && (
+                    <input
+                      type="text"
+                      value={editTextePromo}
+                      onChange={(e) => setEditTextePromo(e.target.value)}
+                      placeholder="Ex: -30% ou 3 pour 2"
+                      className="border rounded p-2 w-40"
+                    />
+                  )}
+
                   <div className="flex items-center gap-1">
                     <input
                       type="text"
@@ -736,6 +765,11 @@ export default function StockPage() {
 
                   <div>
                     <p className="font-medium">
+                      {produit.en_promo && (
+                        <span className="mr-2 text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
+                          🔥 {produit.texte_promo || "Promo"}
+                        </span>
+                      )}
                       {produit.nom}
                       {!produit.disponible && (
                         <span className="ml-2 text-xs text-orange-600 font-normal">
