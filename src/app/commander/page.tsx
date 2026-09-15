@@ -33,7 +33,6 @@ export default function Home() {
   const [clientTelephone, setClientTelephone] = useState("");
   const [clientAdresse, setClientAdresse] = useState("");
   const [clientRemarque, setClientRemarque] = useState("");
-  const [dateRetrait, setDateRetrait] = useState("");
 
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [messageErreur, setMessageErreur] = useState<string | null>(null);
@@ -182,11 +181,6 @@ export default function Home() {
       return;
     }
 
-    if (!dateRetrait) {
-      setMessageErreur("Merci de choisir une date de retrait.");
-      return;
-    }
-
     if (cart.length === 0) {
       setMessageErreur("Votre panier est vide.");
       return;
@@ -209,7 +203,7 @@ export default function Home() {
         body: JSON.stringify({
           clientNom: clientNom.trim(),
           clientTelephone: clientTelephone.trim(),
-          dateRetrait: dateRetrait,
+          dateRetrait: new Date().toISOString().split("T")[0],
           clientRemarque: clientRemarque.trim() || null,
           total: totalPanier,
           lignes: lignesCommande,
@@ -231,7 +225,6 @@ export default function Home() {
       setPanierOuvert(false);
       setClientNom("");
       setClientTelephone("");
-      setDateRetrait("");
       setClientRemarque("");
     } catch (err) {
       setMessageErreur(
@@ -341,7 +334,11 @@ export default function Home() {
             </p>
 
             <p className="mt-1 text-green-700">
-              📱 Un message vous sera envoyé dès que votre commande sera prête à être récupérée.
+              ⏱️ Votre commande sera généralement prête sous 24 à 48h.
+            </p>
+
+            <p className="mt-1 text-green-700">
+              📱 Un message vous sera envoyé dès qu'elle sera prête à être récupérée.
             </p>
           </div>
         )}
@@ -646,21 +643,8 @@ export default function Home() {
                   />
                 </div>
 
-                <div>
-                  <label className="mb-1 block font-semibold">
-                    Date de retrait souhaitée *
-                  </label>
-
-                  <input
-                    type="date"
-                    value={dateRetrait}
-                    onChange={(e) => setDateRetrait(e.target.value)}
-                    className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
-                  />
-                </div>
-
                 <div className="rounded-lg bg-gray-50 border p-3 text-sm text-gray-600">
-                  ℹ️ Nous ne proposons pas de livraison, uniquement du retrait. La date sélectionnée est indicative : la date et l'heure exactes de disponibilité vous seront communiquées par message dès que votre commande sera prête.
+                  ℹ️ Votre commande sera généralement prête sous 24 à 48h ; un message vous sera envoyé dès qu'elle sera disponible.
                 </div>
 
                 {messageErreur && (
