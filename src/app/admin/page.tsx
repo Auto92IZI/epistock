@@ -153,6 +153,7 @@ export default function AdminPage() {
           produit_id,
           quantite,
           prix_unitaire,
+          preparee,
           Produits (
             id,
             nom,
@@ -183,7 +184,7 @@ export default function AdminPage() {
         quantite: ligne.quantite,
         prix_unitaire: ligne.prix_unitaire,
         produit: ligne.Produits,
-        preparee:false
+        preparee: ligne.preparee || false
       }))
     }))
 
@@ -207,10 +208,12 @@ export default function AdminPage() {
   }
 
 
-  function togglePreparation(
+  async function togglePreparation(
     commandeId:number,
     ligneId:number
   ) {
+
+    let nouvelEtat = false
 
     setCommandes((anciennes)=>
 
@@ -230,10 +233,11 @@ export default function AdminPage() {
               return ligne
             }
 
+            nouvelEtat = !ligne.preparee
 
             return {
               ...ligne,
-              preparee: !ligne.preparee
+              preparee: nouvelEtat
             }
 
           })
@@ -243,6 +247,15 @@ export default function AdminPage() {
       })
 
     )
+
+    const { error } = await supabase
+      .from("Lignes_Commande")
+      .update({ preparee: nouvelEtat })
+      .eq("id", ligneId)
+
+    if (error) {
+      console.error("Erreur sauvegarde préparation :", error)
+    }
 
   }
 

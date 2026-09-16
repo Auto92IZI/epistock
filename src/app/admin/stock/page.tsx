@@ -586,13 +586,24 @@ export default function StockPage() {
 
       <div className="space-y-3">
         <div className="flex gap-2">
+          <div className="relative flex-1">
           <input
             type="text"
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
             placeholder="🔍 Rechercher un produit..."
-            className="flex-1 border rounded-lg p-3 outline-none focus:ring-2"
+            className="flex-1 border rounded-lg p-3 pr-10 outline-none focus:ring-2"
           />
+          {recherche !== "" && (
+            <button
+              onClick={() => setRecherche("")}
+              aria-label="Effacer la recherche"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-xl leading-none"
+            >
+              ✕
+            </button>
+          )}
+          </div>
 
           <button
             onClick={() => setScannerOuvert("filtrer")}

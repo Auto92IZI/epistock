@@ -28,6 +28,7 @@ export default function Home() {
   const [formulaireOuvert, setFormulaireOuvert] = useState(false);
   const [categorieSelectionnee, setCategorieSelectionnee] = useState("Tous");
   const [recherche, setRecherche] = useState("");
+  const [nouveautesUniquement, setNouveautesUniquement] = useState(false);
 
   const [clientNom, setClientNom] = useState("");
   const [clientTelephone, setClientTelephone] = useState("");
@@ -81,6 +82,12 @@ export default function Home() {
     return produits.filter((p) => p.categorie === categorie).length;
   }
 
+  function prioriteAffichage(p: Produit) {
+    if (p.en_promo) return 0;
+    if (estNouveau(p)) return 1;
+    return 2;
+  }
+
   const produitsFiltres = produits
     .filter((p) =>
       categorieSelectionnee === "Tous" ? true : p.categorie === categorieSelectionnee
@@ -90,11 +97,8 @@ export default function Home() {
         ? true
         : p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
     )
-    .sort((a, b) => {
-      if (a.en_promo && !b.en_promo) return -1;
-      if (!a.en_promo && b.en_promo) return 1;
-      return 0;
-    });
+    .filter((p) => (nouveautesUniquement ? estNouveau(p) : true))
+    .sort((a, b) => prioriteAffichage(a) - prioriteAffichage(b));
 
   function ajouterAuPanier(produit: Produit) {
     setCart((panierActuel) => {
@@ -355,17 +359,39 @@ export default function Home() {
         )}
 
         <div className="mb-4">
-          <input
-            type="text"
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-            placeholder="🔍 Rechercher un produit..."
-            className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
-          />
+          <div className="relative w-full">
+            <input
+              type="text"
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              placeholder="🔍 Rechercher un produit..."
+              className="w-full rounded-lg border px-4 py-3 pr-10 outline-none focus:ring-2"
+            />
+            {recherche !== "" && (
+              <button
+                onClick={() => setRecherche("")}
+                aria-label="Effacer la recherche"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-xl leading-none"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
 
         {categories.length > 1 && (
           <div className="mb-6 flex flex-wrap gap-2">
+            <button
+              onClick={() => setNouveautesUniquement((v) => !v)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                nouveautesUniquement
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 border hover:bg-gray-100"
+              }`}
+            >
+              🆕 Nouveautés
+            </button>
+
             {categories.map((categorie) => (
               <button
                 key={categorie}
