@@ -248,14 +248,15 @@ export default function AdminPage() {
 
     )
 
-    const { error } = await supabase
+    console.log("Tentative de sauvegarde :", { ligneId, nouvelEtat })
+
+    const { data, error, status, statusText } = await supabase
       .from("Lignes_Commande")
       .update({ preparee: nouvelEtat })
       .eq("id", ligneId)
+      .select()
 
-    if (error) {
-      console.error("Erreur sauvegarde préparation :", error)
-    }
+    console.log("Résultat sauvegarde :", { data, error, status, statusText })
 
   }
 
