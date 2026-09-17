@@ -233,6 +233,7 @@ export default function AdminPage() {
               return ligne
             }
 
+            console.log("Ligne AVANT clic :", { id: ligne.id, preparee: ligne.preparee })
             nouvelEtat = !ligne.preparee
 
             return {
