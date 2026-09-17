@@ -213,7 +213,9 @@ export default function AdminPage() {
     ligneId:number
   ) {
 
-    let nouvelEtat = false
+    const commandeActuelle = commandes.find((c) => c.id === commandeId)
+    const ligneActuelle = commandeActuelle?.lignes.find((l) => l.id === ligneId)
+    const nouvelEtat = !ligneActuelle?.preparee
 
     setCommandes((anciennes)=>
 
@@ -233,9 +235,6 @@ export default function AdminPage() {
               return ligne
             }
 
-            console.log("Ligne AVANT clic :", { id: ligne.id, preparee: ligne.preparee })
-            nouvelEtat = !ligne.preparee
-
             return {
               ...ligne,
               preparee: nouvelEtat
@@ -249,15 +248,14 @@ export default function AdminPage() {
 
     )
 
-    console.log("Tentative de sauvegarde :", { ligneId, nouvelEtat })
-
-    const { data, error, status, statusText } = await supabase
+    const { error } = await supabase
       .from("Lignes_Commande")
       .update({ preparee: nouvelEtat })
       .eq("id", ligneId)
-      .select()
 
-    console.log("Résultat sauvegarde :", { data, error, status, statusText })
+    if (error) {
+      console.error("Erreur sauvegarde préparation :", error)
+    }
 
   }
 
