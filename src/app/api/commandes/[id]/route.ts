@@ -7,44 +7,55 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const { statut } = await request.json()
+    const body = await request.json()
 
-    if (!statut) {
-      return NextResponse.json(
-        { success: false, message: "Statut requis" },
-        { status: 400 }
-      )
-    }
+    const misAJour: {
+      statut?: string
+      client_nom?: string
+      client_telephone?: string
+    } = {}
 
-    // Si on annule, on remet les produits en stock avant de changer le statut
-    if (statut === "Annulée") {
-      const { data: lignes, error: erreurLignes } = await supabaseAdmin
-        .from("Lignes_Commande")
-        .select("produit_id, quantite")
-        .eq("commande_id", id)
+    if (typeof body.statut === "string") {
+      // Si on annule, on remet les produits en stock avant de changer le statut
+      if (body.statut === "Annulée") {
+        const { data: lignes, error: erreurLignes } = await supabaseAdmin
+          .from("Lignes_Commande")
+          .select("produit_id, quantite")
+          .eq("commande_id", id)
 
-      if (erreurLignes) {
-        throw new Error(erreurLignes.message)
-      }
+        if (erreurLignes) {
+          throw new Error(erreurLignes.message)
+        }
 
-      for (const ligne of lignes || []) {
-        const { error: erreurStock } = await supabaseAdmin.rpc(
-          "ajuster_stock",
-          {
-            produit_id_input: ligne.produit_id,
-            delta: ligne.quantite,
+        for (const ligne of lignes || []) {
+          const { error: erreurStock } = await supabaseAdmin.rpc(
+            "ajuster_stock",
+            {
+              produit_id_input: ligne.produit_id,
+              delta: ligne.quantite,
+            }
+          )
+
+          if (erreurStock) {
+            console.log("ERREUR REMISE EN STOCK :", erreurStock)
           }
-        )
-
-        if (erreurStock) {
-          console.log("ERREUR REMISE EN STOCK :", erreurStock)
         }
       }
+
+      misAJour.statut = body.statut
+    }
+
+    if (typeof body.clientNom === "string" && body.clientNom.trim() !== "") {
+      misAJour.client_nom = body.clientNom.trim()
+    }
+
+    if (typeof body.clientTelephone === "string" && body.clientTelephone.trim() !== "") {
+      misAJour.client_telephone = body.clientTelephone.trim()
     }
 
     const { error } = await supabaseAdmin
       .from("Commandes")
-      .update({ statut })
+      .update(misAJour)
       .eq("id", id)
 
     if (error) {

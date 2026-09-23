@@ -43,6 +43,10 @@ export default function AdminPage() {
   const [commandes, setCommandes] = useState<Commande[]>([])
   const [chargement, setChargement] = useState(true)
   const [commandeSurlignee, setCommandeSurlignee] = useState<number | null>(null)
+  const [commandeEnEdition, setCommandeEnEdition] = useState<number | null>(null)
+  const [editClientNom, setEditClientNom] = useState("")
+  const [editClientTelephone, setEditClientTelephone] = useState("")
+  const [enregistrementClientEnCours, setEnregistrementClientEnCours] = useState(false)
   const [statutNotifs, setStatutNotifs] = useState<"inactif" | "actif" | "refuse" | "non_supporte">("inactif")
 
 
@@ -469,6 +473,84 @@ Merci.`
 
 
 
+  function ouvrirEditionClient(commande: Commande) {
+    setCommandeEnEdition(commande.id)
+    setEditClientNom(commande.client_nom)
+    setEditClientTelephone(commande.client_telephone)
+  }
+
+  function annulerEditionClient() {
+    setCommandeEnEdition(null)
+  }
+
+  async function enregistrerEditionClient(commandeId: number) {
+    if (!editClientNom.trim() || !editClientTelephone.trim()) {
+      return
+    }
+
+    setEnregistrementClientEnCours(true)
+
+    const res = await fetch(`/api/commandes/${commandeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientNom: editClientNom.trim(),
+        clientTelephone: editClientTelephone.trim(),
+      }),
+    })
+
+    const data = await res.json()
+
+    setEnregistrementClientEnCours(false)
+
+    if (data.success) {
+      setCommandes((anciennes) =>
+        anciennes.map((c) =>
+          c.id === commandeId
+            ? { ...c, client_nom: editClientNom.trim(), client_telephone: editClientTelephone.trim() }
+            : c
+        )
+      )
+      setCommandeEnEdition(null)
+    } else {
+      alert("Erreur lors de la modification des informations client")
+    }
+  }
+
+  async function supprimerLigneCommande(commandeId: number, ligneId: number) {
+    const confirmation = window.confirm(
+      "Retirer ce produit de la commande ? Il sera remis en stock et le total recalculé."
+    )
+
+    if (!confirmation) {
+      return
+    }
+
+    const res = await fetch(`/api/commandes/${commandeId}/lignes/${ligneId}`, {
+      method: "DELETE",
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      setCommandes((anciennes) =>
+        anciennes.map((c) =>
+          c.id === commandeId
+            ? {
+                ...c,
+                lignes: c.lignes.filter((l) => l.id !== ligneId),
+                total: data.nouveauTotal,
+              }
+            : c
+        )
+      )
+    } else {
+      alert("Erreur lors de la suppression du produit")
+    }
+  }
+
+
+
   async function deconnexion() {
     await fetch("/api/logout", { method: "POST" })
     window.location.href = "/admin/login"
@@ -585,34 +667,71 @@ Merci.`
                 </h2>
 
 
-                <p>
-                  Client : {commande.client_nom}
-                </p>
+                {commandeEnEdition === commande.id ? (
+                  <div className="space-y-2 mt-2">
+                    <input
+                      type="text"
+                      value={editClientNom}
+                      onChange={(e) => setEditClientNom(e.target.value)}
+                      placeholder="Nom du client"
+                      className="border rounded p-2 w-full max-w-xs"
+                    />
+                    <input
+                      type="text"
+                      value={editClientTelephone}
+                      onChange={(e) => setEditClientTelephone(e.target.value)}
+                      placeholder="Téléphone"
+                      className="border rounded p-2 w-full max-w-xs"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => enregistrerEditionClient(commande.id)}
+                        disabled={enregistrementClientEnCours}
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded text-sm"
+                      >
+                        {enregistrementClientEnCours ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                      <button
+                        onClick={annulerEditionClient}
+                        className="bg-gray-200 px-3 py-1.5 rounded text-sm"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p>
+                      Client : {commande.client_nom}
+                    </p>
 
 
-                <p>
-                  Téléphone : {commande.client_telephone}
-                </p>
+                    <p>
+                      Téléphone : {commande.client_telephone}
+                    </p>
 
 
-                <p>
-                  Date retrait : {commande.date_retrait}
-                </p>
+                    {
+                      commande.client_remarque &&
 
+                      <p>
+                        Remarque : {commande.client_remarque}
+                      </p>
 
-                {
-                  commande.client_remarque &&
+                    }
 
-                  <p>
-                    Remarque : {commande.client_remarque}
-                  </p>
+                    <button
+                      onClick={() => ouvrirEditionClient(commande)}
+                      className="text-xs text-blue-600 underline mt-1"
+                    >
+                      Modifier les infos client
+                    </button>
 
-                }
-
-
-                <p className="font-semibold text-lg mt-1">
-                  Total : {Number(commande.total).toFixed(2)} €
-                </p>
+                    <p className="font-semibold text-lg mt-1">
+                      Total : {Number(commande.total).toFixed(2)} €
+                    </p>
+                  </>
+                )}
 
 
               </div>
@@ -680,7 +799,7 @@ Merci.`
                       />
                     )}
 
-                    <div>
+                    <div className="flex-1">
 
                       <p className="font-medium">
 
@@ -708,6 +827,13 @@ Merci.`
 
 
                     </div>
+
+                    <button
+                      onClick={() => supprimerLigneCommande(commande.id, ligne.id)}
+                      className="text-xs text-red-600 underline"
+                    >
+                      Retirer
+                    </button>
 
 
                   </div>
