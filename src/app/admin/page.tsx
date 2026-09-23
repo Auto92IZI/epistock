@@ -363,6 +363,36 @@ Merci.`
 
 
 
+  function prevenirClientParSMS(
+    commande:Commande
+  ){
+
+    const message =
+`Bonjour ${commande.client_nom}, votre commande DI Shop est prête. Vous pouvez venir la récupérer. Merci.`
+
+
+    let telephone = commande.client_telephone.replace(/\s/g, "")
+
+    if (telephone.startsWith("0")) {
+      telephone = "+33" + telephone.slice(1)
+    } else if (!telephone.startsWith("+")) {
+      telephone = "+" + telephone
+    }
+
+
+    const estIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
+    const separateur = estIOS ? "&" : "?"
+
+    const lien = document.createElement("a")
+    lien.href = `sms:${telephone}${separateur}body=${encodeURIComponent(message)}`
+    document.body.appendChild(lien)
+    lien.click()
+    document.body.removeChild(lien)
+
+  }
+
+
+
   function validerEtPrevenir(
     commande:Commande
   ){
@@ -799,6 +829,32 @@ Merci.`
               >
 
                 Renvoyer le message au client
+
+              </button>
+
+            }
+
+
+
+            {
+              commande.statut === "Prête"
+
+              &&
+
+
+              <button
+
+                onClick={()=>
+                  prevenirClientParSMS(
+                    commande
+                  )
+                }
+
+                className="bg-purple-600 text-white px-4 py-2 rounded mr-2"
+
+              >
+
+                💬 Envoyer par SMS
 
               </button>
 
