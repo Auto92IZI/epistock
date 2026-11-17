@@ -1,709 +1,90 @@
-"use client";
+"use client"
+import { useEffect, useState } from "react"
+import Link from "next/link"
+import { Ligne, lirePanier, ecrirePanier } from "@/lib/panier"
 
-import { supabase } from "@/lib/supabase";
-import { useState, useEffect } from "react";
+export default function Commande() {
+  const [p, setP] = useState<Ligne[]>([])
+  const [nom, setNom] = useState("")
+  const [tel, setTel] = useState("")
+  const [age, setAge] = useState(false)
+  const [err, setErr] = useState("")
+  const [envoi, setEnvoi] = useState(false)
+  const [num, setNum] = useState<number | null>(null)
 
-type Produit = {
-  id: number;
-  nom: string;
-  categorie: string | null;
-  stock: number;
-  prix: number;
-  image_url: string;
-  created_at?: string;
-  en_promo?: boolean;
-  texte_promo?: string | null;
-};
+  useEffect(() => { setP(lirePanier()) }, [])
 
-type PanierItem = {
-  produit: Produit;
-  quantite: number;
-};
+  const maj = (l: Ligne[]) => { setP(l); ecrirePanier(l) }
+  const total = p.reduce((t, l) => t + l.prix * l.quantite, 0)
 
-export default function Home() {
-  const [produits, setProduits] = useState<Produit[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [cart, setCart] = useState<PanierItem[]>([]);
-  const [panierOuvert, setPanierOuvert] = useState(false);
-  const [formulaireOuvert, setFormulaireOuvert] = useState(false);
-  const [categorieSelectionnee, setCategorieSelectionnee] = useState("Tous");
-  const [recherche, setRecherche] = useState("");
-  const [nouveautesUniquement, setNouveautesUniquement] = useState(false);
-
-  const [clientNom, setClientNom] = useState("");
-  const [clientTelephone, setClientTelephone] = useState("");
-  const [clientAdresse, setClientAdresse] = useState("");
-  const [clientRemarque, setClientRemarque] = useState("");
-
-  const [envoiEnCours, setEnvoiEnCours] = useState(false);
-  const [messageErreur, setMessageErreur] = useState<string | null>(null);
-  const [commandeValidee, setCommandeValidee] = useState<number | null>(null);
-  const [messageInterne, setMessageInterne] = useState(false);
-
-  useEffect(() => {
-    async function fetchProduits() {
-      const { data, error } = await supabase
-        .from("Produits")
-        .select("*")
-        .eq("disponible", true);
-
-      if (error) {
-        setError(error.message);
-      } else {
-        setProduits(data || []);
-      }
-    }
-
-    fetchProduits();
-  }, []);
-
-  function estNouveau(produit: Produit) {
-    if (!produit.created_at) return false;
-    const diffJours =
-      (Date.now() - new Date(produit.created_at).getTime()) / (1000 * 60 * 60 * 24);
-    return diffJours <= 30;
-  }
-
-  const categories = [
-    "Tous",
-    ...Array.from(
-      new Set(
-        produits
-          .map((p) => p.categorie)
-          .filter((c): c is string => !!c && c.trim() !== "")
-      )
-    ),
-  ];
-
-  function compterProduits(categorie: string) {
-    if (categorie === "Tous") {
-      return produits.length;
-    }
-    return produits.filter((p) => p.categorie === categorie).length;
-  }
-
-  function prioriteAffichage(p: Produit) {
-    if (p.en_promo) return 0;
-    if (estNouveau(p)) return 1;
-    return 2;
-  }
-
-  const produitsFiltres = produits
-    .filter((p) =>
-      categorieSelectionnee === "Tous" ? true : p.categorie === categorieSelectionnee
-    )
-    .filter((p) =>
-      recherche.trim() === ""
-        ? true
-        : p.nom.toLowerCase().includes(recherche.trim().toLowerCase())
-    )
-    .filter((p) => (nouveautesUniquement ? estNouveau(p) : true))
-    .sort((a, b) => prioriteAffichage(a) - prioriteAffichage(b));
-
-  function ajouterAuPanier(produit: Produit) {
-    setCart((panierActuel) => {
-      const produitExistant = panierActuel.find(
-        (item) => item.produit.id === produit.id
-      );
-
-      if (produitExistant) {
-        if (produitExistant.quantite >= produit.stock) {
-          return panierActuel;
-        }
-
-        return panierActuel.map((item) =>
-          item.produit.id === produit.id
-            ? { ...item, quantite: item.quantite + 1 }
-            : item
-        );
-      }
-
-      if (produit.stock <= 0) {
-        return panierActuel;
-      }
-
-      return [...panierActuel, { produit, quantite: 1 }];
-    });
-  }
-
-  function augmenterQuantite(produitId: number) {
-    setCart((panierActuel) =>
-      panierActuel.map((item) => {
-        if (item.produit.id !== produitId) {
-          return item;
-        }
-
-        if (item.quantite >= item.produit.stock) {
-          return item;
-        }
-
-        return {
-          ...item,
-          quantite: item.quantite + 1,
-        };
-      })
-    );
-  }
-
-  function diminuerQuantite(produitId: number) {
-    setCart((panierActuel) =>
-      panierActuel
-        .map((item) => {
-          if (item.produit.id !== produitId) {
-            return item;
-          }
-
-          return {
-            ...item,
-            quantite: item.quantite - 1,
-          };
-        })
-        .filter((item) => item.quantite > 0)
-    );
-  }
-
-  const nombreArticles = cart.reduce(
-    (total, item) => total + item.quantite,
-    0
-  );
-
-  const totalPanier = cart.reduce(
-    (total, item) => total + item.produit.prix * item.quantite,
-    0
-  );
-
-  async function validerCommande() {
-    setMessageErreur(null);
-
-    if (!clientNom.trim()) {
-      setMessageErreur("Merci de renseigner votre nom et prénom.");
-      return;
-    }
-
-    if (!clientTelephone.trim()) {
-      setMessageErreur("Merci de renseigner votre numéro de téléphone.");
-      return;
-    }
-
-    if (cart.length === 0) {
-      setMessageErreur("Votre panier est vide.");
-      return;
-    }
-
-    setEnvoiEnCours(true);
-
+  async function valider() {
+    setErr("")
+    if (!nom.trim() || !tel.trim()) { setErr("Merci d'indiquer votre nom et votre téléphone."); return }
+    if (!age) { setErr("Merci de confirmer que vous avez 18 ans ou plus."); return }
+    setEnvoi(true)
     try {
-      const lignesCommande = cart.map((item) => ({
-        produit_id: item.produit.id,
-        quantite: item.quantite,
-        prix_unitaire: item.produit.prix,
-      }));
-
-      const reponse = await fetch("/api/commande", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clientNom: clientNom.trim(),
-          clientTelephone: clientTelephone.trim(),
-          dateRetrait: new Date().toISOString().split("T")[0],
-          clientRemarque: clientRemarque.trim() || null,
-          total: totalPanier,
-          lignes: lignesCommande,
-        }),
-      });
-
-      const resultat = await reponse.json();
-
-      if (!reponse.ok || !resultat.success) {
-        throw new Error(resultat.message || "Erreur lors de la création de la commande.");
-      }
-
-      const commandeId = resultat.commandeId;
-
-      setCommandeValidee(Number(commandeId));
-      setMessageInterne(false);
-      setCart([]);
-      setFormulaireOuvert(false);
-      setPanierOuvert(false);
-      setClientNom("");
-      setClientTelephone("");
-      setClientRemarque("");
-    } catch (err) {
-      setMessageErreur(
-        err instanceof Error
-          ? err.message
-          : "Une erreur est survenue lors de la commande."
-      );
-    } finally {
-      setEnvoiEnCours(false);
-    }
-  }
-
-  async function validerRetraitInterne() {
-    if (cart.length === 0) {
-      return;
-    }
-
-    const code = window.prompt("Code de retrait interne :");
-
-    if (!code) {
-      return;
-    }
-
-    setEnvoiEnCours(true);
-    setMessageErreur(null);
-
-    try {
-      const lignesCommande = cart.map((item) => ({
-        produit_id: item.produit.id,
-        quantite: item.quantite,
-        prix_unitaire: item.produit.prix,
-      }));
-
-      const reponse = await fetch("/api/commande", {
+      const r = await fetch("/api/commande", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lignes: lignesCommande,
-          total: 0,
-          codeInterne: code,
+          clientNom: nom.trim(), clientTelephone: tel.trim(),
+          dateRetrait: new Date().toISOString().split("T")[0], total,
+          lignes: p.map((l) => ({ produit_id: l.id, quantite: l.quantite, prix_unitaire: l.prix })),
         }),
-      });
-
-      const resultat = await reponse.json();
-
-      if (!reponse.ok || !resultat.success) {
-        throw new Error(resultat.message || "Code incorrect ou erreur.");
-      }
-
-      setCommandeValidee(Number(resultat.commandeId));
-      setMessageInterne(true);
-      setCart([]);
-      setPanierOuvert(false);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Erreur lors du retrait interne.");
+      })
+      const d = await r.json()
+      if (!r.ok || !d.success) throw new Error(d.message || "Erreur lors de la commande.")
+      ecrirePanier([]); setP([]); setNum(d.commandeId)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erreur lors de la commande.")
     } finally {
-      setEnvoiEnCours(false);
+      setEnvoi(false)
     }
   }
 
-  if (error) {
-    return <div>Erreur : {error}</div>;
-  }
+  if (num) return (
+    <main className="mx-auto max-w-xl px-5 py-20 text-center">
+      <h1 className="serif text-4xl font-semibold">Merci !</h1>
+      <p className="mt-4">Commande n°{num} bien reçue. Elle sera généralement prête sous 24 à 48 h ; nous vous enverrons un message dès qu'elle le sera.</p>
+      <Link href="/" className="mt-8 inline-block underline">Retour à l'accueil</Link>
+    </main>
+  )
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-6xl">
-
-        <div className="mb-8 flex items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold">
-            🛍️ DI Shop
-          </h1>
-
-          <div className="flex items-center gap-2">
-            <a
-              href="/admin"
-              aria-label="Administration"
-              className="opacity-30 hover:opacity-70 transition-opacity p-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </a>
-
-            <button
-              onClick={() => setPanierOuvert(true)}
-              className="rounded-full bg-black px-5 py-3 font-semibold text-white shadow-md transition hover:bg-gray-800"
-            >
-              🛒 Panier : {nombreArticles} article(s)
-            </button>
-          </div>
-        </div>
-
-        {commandeValidee !== null && !messageInterne && (
-          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-5">
-            <h2 className="text-xl font-bold text-green-800">
-              ✅ Votre commande a bien été prise en compte !
-            </h2>
-
-            <p className="mt-2 text-green-700">
-              Merci pour votre commande.
-            </p>
-
-            <p className="mt-1 font-semibold text-green-800">
-              Numéro de commande : #{commandeValidee}
-            </p>
-
-            <p className="mt-1 text-green-700">
-              ⏱️ Votre commande sera généralement prête sous 24 à 48h.
-            </p>
-
-            <p className="mt-1 text-green-700">
-              📱 Un message vous sera envoyé dès qu'elle sera prête à être récupérée.
-            </p>
-          </div>
-        )}
-
-        {commandeValidee !== null && messageInterne && (
-          <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-5">
-            <h2 className="text-xl font-bold text-blue-800">
-              ✅ Retrait interne enregistré (#{commandeValidee})
-            </h2>
-            <p className="mt-1 text-blue-700 text-sm">
-              Le stock a été mis à jour.
-            </p>
-          </div>
-        )}
-
-        <div className="mb-4">
-          <div className="relative w-full">
-            <input
-              type="text"
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              placeholder="🔍 Rechercher un produit..."
-              className="w-full rounded-lg border px-4 py-3 pr-10 outline-none focus:ring-2"
-            />
-            {recherche !== "" && (
-              <button
-                onClick={() => setRecherche("")}
-                aria-label="Effacer la recherche"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-xl leading-none"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {categories.length > 1 && (
-          <div className="mb-6 flex flex-wrap gap-2">
-            <button
-              onClick={() => setNouveautesUniquement((v) => !v)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                nouveautesUniquement
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-700 border hover:bg-gray-100"
-              }`}
-            >
-              🆕 Nouveautés
-            </button>
-
-            {categories.map((categorie) => (
-              <button
-                key={categorie}
-                onClick={() => setCategorieSelectionnee(categorie)}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  categorieSelectionnee === categorie
-                    ? "bg-black text-white"
-                    : "bg-white text-gray-700 border hover:bg-gray-100"
-                }`}
-              >
-                {categorie} ({compterProduits(categorie)})
-              </button>
+    <main className="mx-auto max-w-2xl px-5 py-12">
+      <h1 className="serif text-4xl font-semibold">Ma commande</h1>
+      {p.length === 0 ? (
+        <p className="mt-6">Votre commande est vide. <Link href="/" className="underline">Découvrir nos produits</Link></p>
+      ) : (
+        <>
+          <div className="mt-6 divide-y rounded-2xl border bg-white">
+            {p.map((l) => (
+              <div key={l.id} className="flex items-center gap-3 p-4">
+                <div className="flex-1">
+                  <p className="font-medium">{l.nom}</p>
+                  <p className="text-sm text-[#6b6a62]">{l.format} · {l.prix.toFixed(2)} €</p>
+                </div>
+                <input type="number" min={1} value={l.quantite} className="w-16 rounded border p-1 text-center"
+                  onChange={(e) => maj(p.map((x) => x.id === l.id ? { ...x, quantite: Math.max(1, parseInt(e.target.value) || 1) } : x))} />
+                <p className="w-20 text-right font-semibold">{(l.prix * l.quantite).toFixed(2)} €</p>
+                <button onClick={() => maj(p.filter((x) => x.id !== l.id))} className="text-sm text-red-600">✕</button>
+              </div>
             ))}
           </div>
-        )}
+          <p className="mt-4 text-right text-xl font-semibold">Total : {total.toFixed(2)} €</p>
 
-        {produitsFiltres.length === 0 && (
-          <p className="text-gray-600">Aucun produit ne correspond à votre recherche.</p>
-        )}
-
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {produitsFiltres.map((produit) => {
-            const itemPanier = cart.find(
-              (item) => item.produit.id === produit.id
-            );
-
-            const quantite = itemPanier?.quantite || 0;
-
-            return (
-              <div
-                key={produit.id}
-                className={`relative flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm transition hover:shadow-md ${
-                  produit.en_promo ? "ring-2 ring-red-500" : ""
-                }`}
-              >
-                <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                  {produit.en_promo && (
-                    <span className="text-xs font-bold bg-red-600 text-white px-2 py-1 rounded-full shadow">
-                      🔥 {produit.texte_promo || "Promo"}
-                    </span>
-                  )}
-                  {estNouveau(produit) && (
-                    <span className="text-xs font-bold bg-blue-600 text-white px-2 py-1 rounded-full shadow">
-                      🆕 Nouveau
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex h-56 items-center justify-center bg-white p-4">
-                  <img
-                    src={produit.image_url}
-                    alt={produit.nom}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-
-                <div className="flex flex-1 flex-col p-5">
-
-                  <h2 className="text-xl font-bold">
-                    {produit.nom}
-                  </h2>
-
-                  <p className="mt-2 text-gray-700">
-                    Stock disponible : {produit.stock}
-                  </p>
-
-                  <p className="mt-2 text-lg font-semibold">
-                    {produit.prix.toFixed(2)} €
-                  </p>
-
-                  {quantite > 0 && (
-                    <div className="mt-4 flex items-center justify-center gap-4">
-                      <button
-                        onClick={() => diminuerQuantite(produit.id)}
-                        className="h-9 w-9 rounded-full border text-lg font-bold hover:bg-gray-100"
-                      >
-                        −
-                      </button>
-
-                      <span className="font-bold">
-                        {quantite}
-                      </span>
-
-                      <button
-                        onClick={() => augmenterQuantite(produit.id)}
-                        disabled={quantite >= produit.stock}
-                        className="h-9 w-9 rounded-full border text-lg font-bold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        +
-                      </button>
-                    </div>
-                  )}
-
-                  {quantite === 0 && (
-                    <button
-                      onClick={() => ajouterAuPanier(produit)}
-                      disabled={produit.stock <= 0}
-                      className="mt-auto w-full rounded-lg bg-black px-4 py-3 font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
-                    >
-                      {produit.stock <= 0 ? "Rupture de stock" : "Ajouter au panier"}
-                    </button>
-                  )}
-
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {panierOuvert && (
-          <div className="fixed inset-0 z-50 bg-black/40">
-
-            <div className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-xl">
-
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold">
-                  🛒 Mon panier
-                </h2>
-
-                <button
-                  onClick={() => setPanierOuvert(false)}
-                  className="text-2xl font-bold text-gray-500 hover:text-black"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {cart.length === 0 && (
-                <p className="text-gray-600">
-                  Votre panier est vide.
-                </p>
-              )}
-
-              {cart.length > 0 && (
-                <>
-                  <div className="space-y-5">
-
-                    {cart.map((item) => (
-                      <div
-                        key={item.produit.id}
-                        className="border-b pb-5"
-                      >
-
-                        <div className="flex items-center justify-between">
-
-                          <div>
-                            <p className="font-semibold">
-                              {item.produit.nom}
-                            </p>
-
-                            <p className="text-sm text-gray-600">
-                              {item.produit.prix.toFixed(2)} € / unité
-                            </p>
-                          </div>
-
-                          <p className="font-bold">
-                            {(item.quantite * item.produit.prix).toFixed(2)} €
-                          </p>
-
-                        </div>
-
-                        <div className="mt-3 flex items-center gap-3">
-
-                          <button
-                            onClick={() =>
-                              diminuerQuantite(item.produit.id)
-                            }
-                            className="h-8 w-8 rounded-full border font-bold hover:bg-gray-100"
-                          >
-                            −
-                          </button>
-
-                          <span className="font-bold">
-                            {item.quantite}
-                          </span>
-
-                          <button
-                            onClick={() =>
-                              augmenterQuantite(item.produit.id)
-                            }
-                            disabled={
-                              item.quantite >= item.produit.stock
-                            }
-                            className="h-8 w-8 rounded-full border font-bold hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-                          >
-                            +
-                          </button>
-
-                        </div>
-
-                      </div>
-                    ))}
-
-                  </div>
-
-                  <div className="mt-8 border-t pt-6">
-
-                    <div className="flex items-center justify-between text-xl font-bold">
-                      <span>Total</span>
-                      <span>
-                        {totalPanier.toFixed(2)} €
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => setFormulaireOuvert(true)}
-                      className="mt-6 w-full rounded-lg bg-black px-4 py-3 font-semibold text-white hover:bg-gray-800"
-                    >
-                      Passer la commande
-                    </button>
-
-                    <button
-                      onClick={validerRetraitInterne}
-                      disabled={envoiEnCours}
-                      className="mt-2 w-full text-xs text-gray-400 hover:text-gray-600 py-1"
-                    >
-                      Retrait de stock (interne)
-                    </button>
-
-                  </div>
-                </>
-              )}
-
-            </div>
+          <div className="mt-8 space-y-3">
+            <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom et prénom" className="w-full rounded-lg border bg-white px-4 py-3" />
+            <input value={tel} onChange={(e) => setTel(e.target.value)} placeholder="Téléphone" type="tel" className="w-full rounded-lg border bg-white px-4 py-3" />
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={age} onChange={(e) => setAge(e.target.checked)} /> Je confirme avoir 18 ans ou plus</label>
+            <p className="rounded-lg border bg-white p-3 text-sm text-[#5b5a53]">Retrait uniquement. Votre commande sera généralement prête sous 24 à 48 h ; un message vous sera envoyé dès qu'elle sera disponible.</p>
+            {err && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</p>}
+            <button onClick={valider} disabled={envoi} className="w-full rounded-full bg-[#2B2A26] px-5 py-3 font-medium text-white disabled:opacity-50">
+              {envoi ? "Envoi..." : "Valider ma commande"}
+            </button>
           </div>
-        )}
-
-        {formulaireOuvert && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-
-            <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold">
-                  📦 Informations de commande
-                </h2>
-
-                <button
-                  onClick={() => setFormulaireOuvert(false)}
-                  className="text-2xl font-bold text-gray-500 hover:text-black"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="space-y-4">
-
-                <div>
-                  <label className="mb-1 block font-semibold">
-                    Nom / prénom *
-                  </label>
-
-                  <input
-                    type="text"
-                    value={clientNom}
-                    onChange={(e) => setClientNom(e.target.value)}
-                    placeholder="Votre nom et prénom"
-                    className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block font-semibold">
-                    Téléphone *
-                  </label>
-
-                  <input
-                    type="tel"
-                    value={clientTelephone}
-                    onChange={(e) =>
-                      setClientTelephone(e.target.value)
-                    }
-                    placeholder="06 12 34 56 78"
-                    className="w-full rounded-lg border px-4 py-3 outline-none focus:ring-2"
-                  />
-                </div>
-
-                <div className="rounded-lg bg-gray-50 border p-3 text-sm text-gray-600">
-                  ℹ️ Votre commande sera généralement prête sous 24 à 48h ; un message vous sera envoyé dès qu'elle sera disponible.
-                </div>
-
-                {messageErreur && (
-                  <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                    ⚠️ {messageErreur}
-                  </div>
-                )}
-
-                <div className="border-t pt-4">
-
-                  <div className="flex justify-between text-xl font-bold">
-                    <span>Total</span>
-                    <span>{totalPanier.toFixed(2)} €</span>
-                  </div>
-
-                </div>
-
-                <button
-                  onClick={validerCommande}
-                  disabled={envoiEnCours}
-                  className="w-full rounded-lg bg-black px-4 py-3 font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {envoiEnCours
-                    ? "Enregistrement..."
-                    : "Valider ma commande"}
-                </button>
-
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div>
+        </>
+      )}
     </main>
-  );
+  )
 }

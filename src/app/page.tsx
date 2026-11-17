@@ -1,87 +1,51 @@
-import Image from "next/image"
 import Link from "next/link"
-import { Poppins, Inter } from "next/font/google"
+import { SITE, UNIVERS } from "@/content/site"
 import IosInstallBanner from "@/components/IosInstallBanner"
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-poppins",
-})
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-})
-
-export default function HomePage() {
+export default function Accueil() {
   return (
-    <main
-      className={`${poppins.variable} ${inter.variable} min-h-screen flex flex-col items-center justify-between px-6 py-10 relative overflow-hidden`}
-      style={{ backgroundColor: "#FAFAF8" }}
-    >
-      {/* Lueur douce derrière le logo */}
-      <div
-        aria-hidden
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(30,122,60,0.10) 0%, rgba(240,149,31,0.06) 45%, transparent 70%)",
-        }}
-      />
-
-      <div className="flex-1" />
-
-      <div className="flex flex-col items-center text-center relative z-10 max-w-md">
-        <div className="relative w-64 h-64 sm:w-72 sm:h-72 mb-6">
-          <Image
-            src="/logo.png"
-            alt="DI Shop - Épicerie mini prix"
-            fill
-            priority
-            className="object-contain"
-          />
-        </div>
-
-        <p
-          className="text-lg sm:text-xl mb-10"
-          style={{ color: "#4B5563", fontFamily: "var(--font-inter)" }}
-        >
-          Vos courses préparées, prêtes à récupérer.
-        </p>
-
-        <Link
-          href="/commander"
-          className="font-semibold text-white text-lg px-10 py-4 rounded-full shadow-sm transition-transform active:scale-95"
-          style={{ backgroundColor: "#1E7A3C", fontFamily: "var(--font-poppins)" }}
-        >
-          Commander
-        </Link>
-      </div>
-
-      <div className="flex-1" />
-
-      {/* Accès admin discret */}
-      <Link
-        href="/admin"
-        aria-label="Administration"
-        className="relative z-10 opacity-70 hover:opacity-100 transition-opacity p-3"
+    <main>
+      <section
+        className="flex min-h-[78vh] items-center justify-center px-6 text-center text-white"
+        style={{ backgroundImage: "linear-gradient(rgba(30,28,20,.45),rgba(30,28,20,.65)), url(/images/accueil.jpg), linear-gradient(135deg,#4F5D2A,#B7791F 55%,#6E1B38)", backgroundSize: "cover", backgroundPosition: "center" }}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-      </Link>
+        <div className="max-w-3xl">
+          <p className="mb-4 text-xs uppercase tracking-[0.3em] text-[#F2D98A]">Bio · Artisanal · Nord du Portugal</p>
+          <h1 className="serif text-5xl font-semibold leading-tight md:text-7xl">{SITE.nom}</h1>
+          <p className="mx-auto mt-6 max-w-xl text-lg text-white/85">{SITE.accroche}</p>
+          <Link href="#univers" className="mt-8 inline-block rounded-full bg-[#F2D98A] px-7 py-3 font-medium text-[#2B2A26]">Découvrir nos produits</Link>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-2">
+        <div
+          className="aspect-[4/3] rounded-2xl bg-cover bg-center shadow-lg"
+          style={{ backgroundImage: "url(/images/Nord-portugal.jpg), linear-gradient(135deg,#4F5D2A,#B7791F)" }}
+        />
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-[#B7791F]">Do Norte</p>
+          <h2 className="serif mt-3 text-4xl font-semibold text-[#4F5D2A]">Le nord du Portugal, dans votre assiette</h2>
+          <p className="mt-4 leading-relaxed text-[#3b3a35]">
+            Huile d'olive, miel, porto et eau-de-vie : des produits de petits producteurs, bio et artisanaux, fidèles aux recettes et aux gestes transmis de génération en génération.
+          </p>
+        </div>
+      </section>
+
+      <section id="univers" className="mx-auto grid max-w-6xl gap-5 px-5 pb-20 sm:grid-cols-2">
+        {Object.entries(UNIVERS).map(([slug, u]) => (
+          <Link
+            key={slug}
+            href={`/univers/${slug}`}
+            className="group flex min-h-[260px] flex-col justify-end rounded-2xl p-7 text-white"
+            style={{ backgroundImage: `linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,.05)), url(${u.hero}), linear-gradient(135deg,${u.couleur},${u.accent})`, backgroundSize: "cover", backgroundPosition: "center" }}
+          >
+            <p className="text-xs uppercase tracking-[0.25em]" style={{ color: "#F2D98A" }}>{u.mot}</p>
+            <h2 className="serif mt-1 text-3xl font-semibold">{u.nom}</h2>
+            <p className="mt-1 text-white/85">{u.accroche}</p>
+            <span className="mt-3 text-sm group-hover:underline">Entrer dans l'univers →</span>
+          </Link>
+        ))}
+      </section>
       <IosInstallBanner />
     </main>
   )
