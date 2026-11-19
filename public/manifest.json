@@ -1,7 +1,7 @@
 {
-  "name": "Sabores do Norte",
-  "short_name": "Sabores",
-  "description": "Huile d'olive, miel, porto et eau-de-vie artisanaux du nord du Portugal",
+  "name": "Alma Lusa",
+  "short_name": "Alma Lusa",
+  "description": "Huile d'olive, miel, porto et eau-de-vie artisanaux du Portugal",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FAF6EE",

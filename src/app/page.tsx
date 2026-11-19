@@ -10,7 +10,7 @@ export default function Accueil() {
         style={{ backgroundImage: "linear-gradient(rgba(30,28,20,.45),rgba(30,28,20,.65)), url(/images/accueil.jpg), linear-gradient(135deg,#4F5D2A,#B7791F 55%,#6E1B38)", backgroundSize: "cover", backgroundPosition: "center" }}
       >
         <div className="max-w-3xl">
-          <p className="mb-4 text-xs uppercase tracking-[0.3em] text-[#F2D98A]">Bio · Artisanal · Nord du Portugal</p>
+          <p className="mb-4 text-xs uppercase tracking-[0.3em] text-[#F2D98A]">Bio · Artisanal · Portugal</p>
           <h1 className="serif text-5xl font-semibold leading-tight md:text-7xl">{SITE.nom}</h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-white/85">{SITE.accroche}</p>
           <Link href="#univers" className="mt-8 inline-block rounded-full bg-[#F2D98A] px-7 py-3 font-medium text-[#2B2A26]">Découvrir nos produits</Link>
@@ -20,13 +20,13 @@ export default function Accueil() {
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-2">
         <div
           className="aspect-[4/3] rounded-2xl bg-cover bg-center shadow-lg"
-          style={{ backgroundImage: "url(/images/Nord-portugal.jpg), linear-gradient(135deg,#4F5D2A,#B7791F)" }}
+          style={{ backgroundImage: "url(/images/Nord-Portugal.jpg), linear-gradient(135deg,#4F5D2A,#B7791F)" }}
         />
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-[#B7791F]">Do Norte</p>
-          <h2 className="serif mt-3 text-4xl font-semibold text-[#4F5D2A]">Le nord du Portugal, dans votre assiette</h2>
+          <p className="text-xs uppercase tracking-[0.25em] text-[#B7791F]">Notre histoire</p>
+          <h2 className="serif mt-3 text-4xl font-semibold text-[#4F5D2A]">L'âme du Portugal, dans votre assiette</h2>
           <p className="mt-4 leading-relaxed text-[#3b3a35]">
-            Huile d'olive, miel, porto et eau-de-vie : des produits de petits producteurs, bio et artisanaux, fidèles aux recettes et aux gestes transmis de génération en génération.
+            Huile d'olive, miel, porto et eau-de-vie : des produits de petits producteurs, du nord du Portugal à l'Alentejo, bio et artisanaux, fidèles aux recettes et aux gestes transmis de génération en génération.
           </p>
         </div>
       </section>

@@ -31,7 +31,7 @@ export default function IosInstallBanner() {
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-xl bg-white border shadow-lg p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="font-semibold text-sm">📲 Installez DI Shop sur votre iPhone</p>
+          <p className="font-semibold text-sm">📲 Installez Alma Lusa sur votre iPhone</p>
           <p className="text-sm text-gray-600 mt-1">
             Appuyez sur{" "}
             <span className="inline-block align-middle">
