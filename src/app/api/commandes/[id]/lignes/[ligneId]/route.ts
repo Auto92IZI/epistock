@@ -8,65 +8,37 @@ export async function DELETE(
   try {
     const { id, ligneId } = await params
 
-    const { data: ligne, error: erreurLigne } = await supabaseAdmin
-      .from("Lignes_Commande")
-      .select("produit_id, quantite")
-      .eq("id", ligneId)
-      .single()
-
-    if (erreurLigne || !ligne) {
-      throw new Error(erreurLigne?.message || "Ligne introuvable")
-    }
-
     const { error: erreurDelete } = await supabaseAdmin
       .from("Lignes_Commande")
       .delete()
       .eq("id", ligneId)
+      .eq("commande_id", id)
 
-    if (erreurDelete) {
-      throw new Error(erreurDelete.message)
-    }
+    if (erreurDelete) throw new Error(erreurDelete.message)
 
-    const { error: erreurStock } = await supabaseAdmin.rpc("ajuster_stock", {
-      produit_id_input: ligne.produit_id,
-      delta: ligne.quantite,
-    })
+    const { data: restantes, error: erreurRestantes } = await supabaseAdmin
+      .from("Lignes_Commande")
+      .select("quantite, prix_unitaire")
+      .eq("commande_id", id)
 
-    if (erreurStock) {
-      console.log("ERREUR REMISE EN STOCK :", erreurStock)
-    }
+    if (erreurRestantes) throw new Error(erreurRestantes.message)
 
-    const { data: lignesRestantes, error: erreurLignesRestantes } =
-      await supabaseAdmin
-        .from("Lignes_Commande")
-        .select("quantite, prix_unitaire")
-        .eq("commande_id", id)
+    const nouveauTotal =
+      Math.round(
+        (restantes || []).reduce((t: number, l: any) => t + l.quantite * l.prix_unitaire, 0) * 100
+      ) / 100
 
-    if (erreurLignesRestantes) {
-      throw new Error(erreurLignesRestantes.message)
-    }
-
-    const nouveauTotal = (lignesRestantes || []).reduce(
-      (total, l) => total + l.quantite * l.prix_unitaire,
-      0
-    )
-
-    const { error: erreurMajTotal } = await supabaseAdmin
+    const { error: erreurTotal } = await supabaseAdmin
       .from("Commandes")
       .update({ total: nouveauTotal })
       .eq("id", id)
 
-    if (erreurMajTotal) {
-      throw new Error(erreurMajTotal.message)
-    }
+    if (erreurTotal) throw new Error(erreurTotal.message)
 
     return NextResponse.json({ success: true, nouveauTotal })
   } catch (error) {
     return NextResponse.json(
-      {
-        success: false,
-        message: error instanceof Error ? error.message : "Erreur inconnue",
-      },
+      { success: false, message: error instanceof Error ? error.message : "Erreur inconnue" },
       { status: 500 }
     )
   }

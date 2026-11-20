@@ -39,7 +39,7 @@ export default function LoginPage() {
         className="w-full max-w-sm space-y-4 border rounded-xl p-6 shadow-sm"
       >
         <h1 className="text-2xl font-bold text-center">
-          Administration DI Shop
+          Administration Alma Lusa
         </h1>
 
         <input

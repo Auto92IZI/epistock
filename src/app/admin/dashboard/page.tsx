@@ -254,8 +254,8 @@ export default function DashboardPage() {
           <Link href="/admin" className="text-sm text-blue-600 underline">
             Retour aux commandes
           </Link>
-          <Link href="/admin/stock" className="text-sm text-blue-600 underline">
-            Gérer le stock
+          <Link href="/admin/produits" className="text-sm text-blue-600 underline">
+            Gérer les produits
           </Link>
         </div>
       </div>
@@ -280,7 +280,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Indicateurs clés */}
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="border rounded-xl p-5 shadow-sm">
           <p className="text-sm text-gray-500">Chiffre d'affaires</p>
           <p className="text-3xl font-bold mt-1">{caTotal.toFixed(2)} €</p>
@@ -299,11 +299,6 @@ export default function DashboardPage() {
         <div className="border rounded-xl p-5 shadow-sm">
           <p className="text-sm text-gray-500">Clients (période)</p>
           <p className="text-3xl font-bold mt-1">{nombreClients}</p>
-        </div>
-
-        <div className="border rounded-xl p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Valeur du stock</p>
-          <p className="text-3xl font-bold mt-1">{valeurStock.toFixed(2)} €</p>
         </div>
       </div>
 

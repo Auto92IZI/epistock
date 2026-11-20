@@ -12,7 +12,6 @@ export const metadata: Metadata = {
   title: SITE.nom,
   description: SITE.accroche,
   manifest: "/manifest.json",
-  icons: { apple: "/logo.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: SITE.nom },
 }
 

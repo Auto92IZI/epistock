@@ -1,107 +1,95 @@
-import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { Resend } from "resend";
-import webpush from "@/lib/webpush";
+import { NextResponse } from "next/server"
+import { supabaseAdmin } from "@/lib/supabaseAdmin"
+import { Resend } from "resend"
+import webpush from "@/lib/webpush"
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = await request.json()
+    const clientNom = String(body.clientNom || "").trim()
+    const clientTelephone = String(body.clientTelephone || "").trim()
+    const lignesRecues = Array.isArray(body.lignes) ? body.lignes : []
 
-    const {
-      clientNom,
-      clientTelephone,
-      dateRetrait,
-      clientRemarque,
-      total,
-      lignes,
-      codeInterne,
-    } = body;
-
-    const estRetraitInterne =
-      !!codeInterne && codeInterne === process.env.CODE_RETRAIT_INTERNE;
-
-    if (codeInterne && !estRetraitInterne) {
-      return NextResponse.json(
-        { success: false, message: "Code interne incorrect" },
-        { status: 403 }
-      );
+    if (!clientNom || !clientTelephone) {
+      return NextResponse.json({ success: false, message: "Nom et téléphone requis." }, { status: 400 })
+    }
+    if (lignesRecues.length === 0) {
+      return NextResponse.json({ success: false, message: "La commande est vide." }, { status: 400 })
     }
 
+    const ids = lignesRecues.map((l: any) => Number(l.produit_id))
 
-    // Création de la commande
-    const { data: commande, error: erreurCommande } =
-      await supabaseAdmin
-        .from("Commandes")
-        .insert({
-          client_nom: estRetraitInterne ? "Retrait interne" : clientNom,
-          client_telephone: estRetraitInterne ? "0000000000" : clientTelephone,
-          date_retrait: estRetraitInterne
-            ? new Date().toISOString().split("T")[0]
-            : dateRetrait,
-          client_remarque: clientRemarque || null,
-          total: estRetraitInterne ? 0 : total,
-          statut: estRetraitInterne ? "Récupérée" : "En attente",
-          interne: estRetraitInterne,
-        })
-        .select()
-        .single();
+    const { data: produits, error: erreurProduits } = await supabaseAdmin
+      .from("Produits")
+      .select("id, nom, gamme, format, prix, disponible")
+      .in("id", ids)
 
+    if (erreurProduits) throw new Error(erreurProduits.message)
 
-    if (erreurCommande) {
-  console.log("ERREUR SUPABASE COMMANDE :", erreurCommande);
-  throw new Error(erreurCommande.message);
-}
+    const lignes: { produit_id: number; quantite: number; prix_unitaire: number; libelle: string }[] = []
 
+    for (const l of lignesRecues) {
+      const quantite = Math.floor(Number(l.quantite))
+      const produit = (produits || []).find((p: any) => p.id === Number(l.produit_id))
 
-    // Création des lignes de commande
-    const lignesAvecCommande = lignes.map((ligne: any) => ({
-      commande_id: commande.id,
-      produit_id: ligne.produit_id,
-      quantite: ligne.quantite,
-      prix_unitaire: ligne.prix_unitaire,
-    }));
+      if (!produit || !produit.disponible || !(Number(produit.prix) > 0) || !(quantite >= 1)) {
+        return NextResponse.json(
+          { success: false, message: "Un des produits n'est plus disponible à la commande." },
+          { status: 400 }
+        )
+      }
 
+      lignes.push({
+        produit_id: produit.id,
+        quantite,
+        prix_unitaire: Number(produit.prix),
+        libelle: produit.gamme ? `${produit.gamme} (${produit.format})` : produit.nom,
+      })
+    }
 
-    const { error: erreurLignes } =
-      await supabaseAdmin
-        .from("Lignes_Commande")
-        .insert(lignesAvecCommande);
+    const total = Math.round(lignes.reduce((t, l) => t + l.quantite * l.prix_unitaire, 0) * 100) / 100
 
+    const { data: commande, error: erreurCommande } = await supabaseAdmin
+      .from("Commandes")
+      .insert({
+        client_nom: clientNom,
+        client_telephone: clientTelephone,
+        date_retrait: new Date().toISOString().split("T")[0],
+        client_remarque: null,
+        total,
+        statut: "En attente",
+        interne: false,
+      })
+      .select()
+      .single()
+
+    if (erreurCommande) throw new Error(erreurCommande.message)
+
+    const { error: erreurLignes } = await supabaseAdmin
+      .from("Lignes_Commande")
+      .insert(
+        lignes.map((l) => ({
+          commande_id: commande.id,
+          produit_id: l.produit_id,
+          quantite: l.quantite,
+          prix_unitaire: l.prix_unitaire,
+        }))
+      )
 
     if (erreurLignes) {
-      throw new Error(erreurLignes.message);
+      await supabaseAdmin.from("Commandes").delete().eq("id", commande.id)
+      throw new Error(erreurLignes.message)
     }
 
-
-    // Décrément du stock pour chaque produit commandé
-    for (const ligne of lignes) {
-      const { error: erreurStock } = await supabaseAdmin.rpc(
-        "ajuster_stock",
-        {
-          produit_id_input: ligne.produit_id,
-          delta: -ligne.quantite,
-        }
-      );
-
-      if (erreurStock) {
-        console.log("ERREUR AJUSTEMENT STOCK :", erreurStock);
-      }
-    }
-
-
-    // Envoi de l'email de notification (jamais pour un retrait interne)
-    if (!estRetraitInterne) try {
-      const listeProduits = lignes
-        .map(
-          (ligne: any) =>
-            `- ${ligne.quantite} x produit #${ligne.produit_id} (${ligne.prix_unitaire} € / unité)`
-        )
-        .join("\n");
+    try {
+      const detail = lignes
+        .map((l) => `- ${l.quantite} x ${l.libelle} : ${l.prix_unitaire.toFixed(2)} € l'unité`)
+        .join("\n")
 
       await resend.emails.send({
-        from: "EpiStock <onboarding@resend.dev>",
+        from: "Alma Lusa <onboarding@resend.dev>",
         to: "epistockbox@gmail.com",
         subject: `Nouvelle commande #${commande.id} - ${clientNom}`,
         text: `Nouvelle commande reçue !
@@ -109,79 +97,53 @@ export async function POST(request: Request) {
 Numéro : #${commande.id}
 Client : ${clientNom}
 Téléphone : ${clientTelephone}
-Date de retrait : ${dateRetrait}
-Remarque : ${clientRemarque || "aucune"}
 
 Produits commandés :
-${listeProduits}
+${detail}
 
-Total : ${total} €
+Total : ${total.toFixed(2)} €
 
 Rendez-vous sur la page d'administration pour préparer la commande.`,
-      });
+      })
     } catch (erreurEmail) {
-      console.log("ERREUR ENVOI EMAIL :", erreurEmail);
-      // On ne bloque pas la commande si l'email échoue
+      console.log("ERREUR ENVOI EMAIL :", erreurEmail)
     }
 
-
-    // Envoi des notifications push (jamais pour un retrait interne)
-    if (!estRetraitInterne) try {
-      const { data: abonnements } = await supabaseAdmin
-        .from("push_subscriptions")
-        .select("*");
+    try {
+      const { data: abonnements } = await supabaseAdmin.from("push_subscriptions").select("*")
 
       const { count: nombreActives } = await supabaseAdmin
         .from("Commandes")
         .select("id", { count: "exact", head: true })
-        .neq("statut", "Récupérée");
+        .not("statut", "in", '("Récupérée","Annulée")')
 
       const payload = JSON.stringify({
         title: `Nouvelle commande #${commande.id}`,
-        body: `${clientNom} - ${total} €`,
+        body: `${clientNom} - ${total.toFixed(2)} €`,
         url: `/admin?commande=${commande.id}`,
         badgeCount: nombreActives || 1,
-      });
+      })
 
       for (const abonnement of abonnements || []) {
         try {
-          await webpush.sendNotification(abonnement.subscription, payload);
+          await webpush.sendNotification(abonnement.subscription, payload)
         } catch (erreurEnvoi: any) {
           if (erreurEnvoi.statusCode === 410 || erreurEnvoi.statusCode === 404) {
-            await supabaseAdmin
-              .from("push_subscriptions")
-              .delete()
-              .eq("endpoint", abonnement.endpoint);
+            await supabaseAdmin.from("push_subscriptions").delete().eq("endpoint", abonnement.endpoint)
           } else {
-            console.log("ERREUR ENVOI PUSH :", erreurEnvoi);
+            console.log("ERREUR ENVOI PUSH :", erreurEnvoi)
           }
         }
       }
     } catch (erreurPush) {
-      console.log("ERREUR NOTIFICATIONS PUSH :", erreurPush);
+      console.log("ERREUR NOTIFICATIONS PUSH :", erreurPush)
     }
 
-
-    return NextResponse.json({
-      success: true,
-      commandeId: commande.id,
-    });
-
-
+    return NextResponse.json({ success: true, commandeId: commande.id })
   } catch (error) {
-
     return NextResponse.json(
-      {
-        success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Erreur inconnue",
-      },
-      {
-        status: 500,
-      }
-    );
-    
+      { success: false, message: error instanceof Error ? error.message : "Erreur inconnue" },
+      { status: 500 }
+    )
   }
 }

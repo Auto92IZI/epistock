@@ -3,40 +3,31 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin"
 
 export async function POST(request: Request) {
   try {
-    const { nom, categorie, prix, stock, imageUrl, codeBarre } = await request.json()
+    const body = await request.json()
+    const univers = String(body.univers || "").trim()
+    const gamme = String(body.gamme || "").trim()
+    const format = String(body.format || "").trim()
+    const prix = Number(body.prix)
 
-    if (!nom || prix === undefined || prix === null) {
+    if (!univers || !gamme || !format || isNaN(prix) || prix <= 0) {
       return NextResponse.json(
-        { success: false, message: "Nom et prix requis" },
+        { success: false, message: "Univers, gamme, format et prix (supérieur à 0) requis" },
         { status: 400 }
       )
     }
 
     const { data, error } = await supabaseAdmin
       .from("Produits")
-      .insert({
-        nom,
-        categorie: categorie || null,
-        prix,
-        stock: stock || 0,
-        disponible: true,
-        image_url: imageUrl || null,
-        code_barre: codeBarre || null,
-      })
+      .insert({ nom: `${gamme} - ${format}`, univers, gamme, format, prix, stock: 0, disponible: true })
       .select()
       .single()
 
-    if (error) {
-      throw new Error(error.message)
-    }
+    if (error) throw new Error(error.message)
 
     return NextResponse.json({ success: true, produit: data })
   } catch (error) {
     return NextResponse.json(
-      {
-        success: false,
-        message: error instanceof Error ? error.message : "Erreur inconnue",
-      },
+      { success: false, message: error instanceof Error ? error.message : "Erreur inconnue" },
       { status: 500 }
     )
   }
