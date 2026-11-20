@@ -1,10 +1,19 @@
 "use client"
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { ajouter } from "@/lib/panier"
 import { prixAuLitreOuKilo } from "@/lib/prixUnitaire"
 
-type P = { id: number; gamme: string; format: string; prix: number }
+type P = {
+  id: number
+  gamme: string
+  format: string
+  prix: number
+  lien_carrefour: string | null
+  lien_auchan: string | null
+  lien_leclerc: string | null
+}
 
 const eur = (n: number) => `${Number(n).toFixed(2).replace(".", ",")} €`
 
@@ -17,7 +26,7 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
   useEffect(() => {
     supabase
       .from("Produits")
-      .select("id,gamme,format,prix")
+      .select("id,gamme,format,prix,lien_carrefour,lien_auchan,lien_leclerc")
       .eq("univers", slug)
       .eq("disponible", true)
       .gt("prix", 0)
@@ -40,6 +49,12 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
             const sel = f.find((p) => p.id === choix[g]) || f[0]
             const q = qte[g] || 1
             const unitaire = prixAuLitreOuKilo(sel.format, Number(sel.prix))
+            const comparatif = [
+              { nom: "Carrefour", lien: sel.lien_carrefour },
+              { nom: "Auchan", lien: sel.lien_auchan },
+              { nom: "E.Leclerc", lien: sel.lien_leclerc },
+            ].filter((x) => x.lien)
+
             return (
               <div key={g} className="rounded-2xl border p-6 shadow-sm">
                 <h3 className="serif text-2xl font-semibold">{g}</h3>
@@ -57,6 +72,27 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
                 </div>
                 <p className="mt-4 text-2xl font-semibold" style={{ color: couleur }}>{eur(sel.prix)}</p>
                 {unitaire && <p className="text-xs text-[#6b6a62]">{unitaire}</p>}
+
+                {comparatif.length > 0 && (
+                  <p className="mt-3 text-xs text-[#6b6a62]">
+                    Comparer avec la grande distribution :{" "}
+                    {comparatif.map((x, i) => (
+                      <span key={x.nom}>
+                        {i > 0 && " · "}
+                        <Link
+                          href={x.lien as string}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                          style={{ color: couleur }}
+                        >
+                          {x.nom} ↗
+                        </Link>
+                      </span>
+                    ))}
+                  </p>
+                )}
+
                 <div className="mt-4 flex items-center gap-3">
                   <div className="flex items-center rounded-full border">
                     <button className="h-10 w-10 text-lg" onClick={() => setQte({ ...qte, [g]: Math.max(1, q - 1) })}>−</button>
