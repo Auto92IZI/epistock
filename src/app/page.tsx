@@ -6,13 +6,14 @@ export default function Accueil() {
   return (
     <main>
       <section
-        className="flex min-h-[78vh] items-center justify-center px-6 text-center text-white"
+        className="flex min-h-[78vh] items-center justify-center px-6 py-16 text-center text-white"
         style={{ backgroundImage: "linear-gradient(rgba(30,28,20,.45),rgba(30,28,20,.65)), url(/images/accueil.jpg), linear-gradient(135deg,#4F5D2A,#B7791F 55%,#6E1B38)", backgroundSize: "cover", backgroundPosition: "center" }}
       >
         <div className="max-w-3xl">
-          <p className="mb-4 text-xs uppercase tracking-[0.3em] text-[#F2D98A]">Bio · Artisanal · Portugal</p>
-          <h1 className="serif text-5xl font-semibold leading-tight md:text-7xl">{SITE.nom}</h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg text-white/85">{SITE.accroche}</p>
+          <img src="/logo.webp" alt={SITE.nom} width={220} height={220} className="mx-auto mb-6 h-40 w-40 drop-shadow-2xl md:h-56 md:w-56" />
+          <h1 className="sr-only">{SITE.nom}</h1>
+          <p className="mb-3 text-xs uppercase tracking-[0.3em] text-[#F2D98A]">Bio · Artisanal · Portugal</p>
+          <p className="mx-auto max-w-xl text-lg text-white/90">{SITE.accroche}</p>
           <Link href="#univers" className="mt-8 inline-block rounded-full bg-[#F2D98A] px-7 py-3 font-medium text-[#2B2A26]">Découvrir nos produits</Link>
         </div>
       </section>

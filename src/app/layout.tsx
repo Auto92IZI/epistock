@@ -12,6 +12,13 @@ export const metadata: Metadata = {
   title: SITE.nom,
   description: SITE.accroche,
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+  },
   appleWebApp: { capable: true, statusBarStyle: "default", title: SITE.nom },
 }
 
