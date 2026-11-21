@@ -10,9 +10,8 @@ type P = {
   gamme: string
   format: string
   prix: number
-  lien_carrefour: string | null
-  lien_auchan: string | null
-  lien_leclerc: string | null
+  mis_en_avant: boolean | null
+  lien_comparaison: string | null
 }
 
 const eur = (n: number) => `${Number(n).toFixed(2).replace(".", ",")} €`
@@ -26,7 +25,7 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
   useEffect(() => {
     supabase
       .from("Produits")
-      .select("id,gamme,format,prix,lien_carrefour,lien_auchan,lien_leclerc")
+      .select("id,gamme,format,prix,mis_en_avant,lien_comparaison")
       .eq("univers", slug)
       .eq("disponible", true)
       .gt("prix", 0)
@@ -45,51 +44,63 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           {gammes.map((g) => {
-            const f = produits.filter((p) => p.gamme === g)
+            // Formats mis en avant d'abord, puis les autres, chacun trié par prix
+            const f = produits
+              .filter((p) => p.gamme === g)
+              .sort((a, b) => Number(!!b.mis_en_avant) - Number(!!a.mis_en_avant) || a.prix - b.prix)
             const sel = f.find((p) => p.id === choix[g]) || f[0]
             const q = qte[g] || 1
             const unitaire = prixAuLitreOuKilo(sel.format, Number(sel.prix))
-            const comparatif = [
-              { nom: "Carrefour", lien: sel.lien_carrefour },
-              { nom: "Auchan", lien: sel.lien_auchan },
-              { nom: "E.Leclerc", lien: sel.lien_leclerc },
-            ].filter((x) => x.lien)
 
             return (
               <div key={g} className="rounded-2xl border p-6 shadow-sm">
                 <h3 className="serif text-2xl font-semibold">{g}</h3>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {f.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setChoix({ ...choix, [g]: p.id })}
-                      className="rounded-full border px-4 py-2 text-sm"
-                      style={p.id === sel.id ? { background: couleur, color: "#fff", borderColor: couleur } : {}}
-                    >
-                      {p.format}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-4 text-2xl font-semibold" style={{ color: couleur }}>{eur(sel.prix)}</p>
-                {unitaire && <p className="text-xs text-[#6b6a62]">{unitaire}</p>}
 
-                {comparatif.length > 0 && (
-                  <p className="mt-3 text-xs text-[#6b6a62]">
-                    Comparer avec la grande distribution :{" "}
-                    {comparatif.map((x, i) => (
-                      <span key={x.nom}>
-                        {i > 0 && " · "}
-                        <Link
-                          href={x.lien as string}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline"
-                          style={{ color: couleur }}
-                        >
-                          {x.nom} ↗
-                        </Link>
-                      </span>
-                    ))}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {f.map((p) => {
+                    const actif = p.id === sel.id
+                    const avant = !!p.mis_en_avant
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => setChoix({ ...choix, [g]: p.id })}
+                        className={`rounded-full border px-4 py-2 text-sm ${avant ? "font-semibold" : "text-[#6b6a62]"}`}
+                        style={
+                          actif
+                            ? { background: couleur, color: "#fff", borderColor: couleur }
+                            : avant
+                            ? { borderColor: couleur, color: couleur }
+                            : {}
+                        }
+                      >
+                        {avant && "★ "}
+                        {p.format}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {sel.mis_en_avant && (
+                  <p className="mt-3 text-xs font-medium" style={{ color: couleur }}>★ Notre sélection</p>
+                )}
+
+                <p className="mt-3 text-2xl font-semibold" style={{ color: couleur }}>{eur(sel.prix)}</p>
+
+                {(unitaire || sel.lien_comparaison) && (
+                  <p className="text-xs text-[#6b6a62]">
+                    {unitaire}
+                    {unitaire && sel.lien_comparaison && " · "}
+                    {sel.lien_comparaison && (
+                      <Link
+                        href={sel.lien_comparaison}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                        style={{ color: couleur }}
+                      >
+                        Comparez ↗
+                      </Link>
+                    )}
                   </p>
                 )}
 

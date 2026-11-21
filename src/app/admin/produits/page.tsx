@@ -12,16 +12,9 @@ type Produit = {
   format: string
   prix: number | null
   disponible: boolean
-  lien_carrefour: string | null
-  lien_auchan: string | null
-  lien_leclerc: string | null
+  mis_en_avant: boolean | null
+  lien_comparaison: string | null
 }
-
-const MARQUES = [
-  { champ: "lien_carrefour", nom: "Carrefour" },
-  { champ: "lien_auchan", nom: "Auchan" },
-  { champ: "lien_leclerc", nom: "Leclerc" },
-] as const
 
 function eur(n: number | null) {
   return n && Number(n) > 0 ? `${Number(n).toFixed(2).replace(".", ",")} €` : "Prix à définir"
@@ -46,15 +39,14 @@ export default function ProduitsPage() {
   const [eGamme, setEGamme] = useState("")
   const [eFormat, setEFormat] = useState("")
   const [ePrix, setEPrix] = useState("")
-  const [eCarrefour, setECarrefour] = useState("")
-  const [eAuchan, setEAuchan] = useState("")
-  const [eLeclerc, setELeclerc] = useState("")
+  const [eLien, setELien] = useState("")
+  const [eAvant, setEAvant] = useState(false)
   const [enregistrement, setEnregistrement] = useState(false)
 
   useEffect(() => {
     supabase
       .from("Produits")
-      .select("id, univers, gamme, format, prix, disponible, lien_carrefour, lien_auchan, lien_leclerc")
+      .select("id, univers, gamme, format, prix, disponible, mis_en_avant, lien_comparaison")
       .not("univers", "is", null)
       .order("gamme")
       .order("prix")
@@ -98,9 +90,8 @@ export default function ProduitsPage() {
     setEGamme(p.gamme)
     setEFormat(p.format)
     setEPrix(p.prix ? String(p.prix).replace(".", ",") : "")
-    setECarrefour(p.lien_carrefour || "")
-    setEAuchan(p.lien_auchan || "")
-    setELeclerc(p.lien_leclerc || "")
+    setELien(p.lien_comparaison || "")
+    setEAvant(!!p.mis_en_avant)
   }
 
   async function enregistrer(p: Produit) {
@@ -120,7 +111,8 @@ export default function ProduitsPage() {
         gamme: eGamme.trim(),
         format: eFormat.trim(),
         prix: nouveauPrix,
-        liens: { carrefour: eCarrefour, auchan: eAuchan, leclerc: eLeclerc },
+        lienComparaison: eLien,
+        misEnAvant: eAvant,
       }),
     })
 
@@ -136,9 +128,8 @@ export default function ProduitsPage() {
                 gamme: eGamme.trim(),
                 format: eFormat.trim(),
                 prix: nouveauPrix,
-                lien_carrefour: eCarrefour.trim() || null,
-                lien_auchan: eAuchan.trim() || null,
-                lien_leclerc: eLeclerc.trim() || null,
+                lien_comparaison: eLien.trim() || null,
+                mis_en_avant: eAvant,
               }
             : x
         )
@@ -160,6 +151,22 @@ export default function ProduitsPage() {
 
     if (data.success) {
       setProduits((anciens) => anciens.map((x) => (x.id === p.id ? { ...x, disponible: !p.disponible } : x)))
+    } else {
+      alert(data.message || "Erreur lors de la mise à jour")
+    }
+  }
+
+  async function basculerAvant(p: Produit) {
+    const res = await fetch(`/api/produits/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ misEnAvant: !p.mis_en_avant }),
+    })
+
+    const data = await res.json()
+
+    if (data.success) {
+      setProduits((anciens) => anciens.map((x) => (x.id === p.id ? { ...x, mis_en_avant: !p.mis_en_avant } : x)))
     } else {
       alert(data.message || "Erreur lors de la mise à jour")
     }
@@ -197,7 +204,7 @@ export default function ProduitsPage() {
       <form onSubmit={ajouter} className="space-y-3 rounded-xl border p-4 shadow-sm">
         <h2 className="text-lg font-semibold">Ajouter un produit</h2>
         <p className="text-sm text-gray-500">
-          Un produit correspond à un format. Pour proposer 3 formats d'une même huile, ajoutez-en 3 avec le même nom. Les liens de comparaison se renseignent ensuite avec « Modifier ».
+          Un produit correspond à un format. Pour proposer 3 formats d'une même huile, ajoutez-en 3 avec le même nom. L'étoile et le lien « Comparez » se règlent ensuite avec « Modifier ».
         </p>
 
         <div className="flex flex-wrap gap-3">
@@ -257,12 +264,20 @@ export default function ProduitsPage() {
                             <input value={ePrix} onChange={(e) => setEPrix(e.target.value)} inputMode="decimal" className="w-24 rounded border p-2" />
                           </div>
 
-                          <input value={eCarrefour} onChange={(e) => setECarrefour(e.target.value)} placeholder="Lien Carrefour (https://...)" className="w-full rounded border p-2 text-sm" />
-                          <input value={eAuchan} onChange={(e) => setEAuchan(e.target.value)} placeholder="Lien Auchan (https://...)" className="w-full rounded border p-2 text-sm" />
-                          <input value={eLeclerc} onChange={(e) => setELeclerc(e.target.value)} placeholder="Lien Leclerc (https://...)" className="w-full rounded border p-2 text-sm" />
+                          <input
+                            value={eLien}
+                            onChange={(e) => setELien(e.target.value)}
+                            placeholder="Lien « Comparez » vers le produit d'un concurrent (https://...)"
+                            className="w-full rounded border p-2 text-sm"
+                          />
                           <p className="text-xs text-gray-500">
-                            Collez l'adresse de la fiche produit. Laissez un champ vide pour retirer le lien.
+                            Collez l'adresse de la fiche produit. Laissez vide pour retirer le lien.
                           </p>
+
+                          <label className="flex items-center gap-2 text-sm">
+                            <input type="checkbox" checked={eAvant} onChange={(e) => setEAvant(e.target.checked)} />
+                            ★ Mettre ce format en avant (affiché en premier et présélectionné)
+                          </label>
 
                           <div className="flex gap-2">
                             <button onClick={() => enregistrer(p)} disabled={enregistrement} className="rounded bg-blue-600 px-3 py-2 text-sm text-white">
@@ -274,27 +289,27 @@ export default function ProduitsPage() {
                       ) : (
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <span className="font-medium">{p.format}</span>
+                            <span className="font-medium">
+                              {p.mis_en_avant && <span className="mr-1 text-amber-500">★</span>}
+                              {p.format}
+                            </span>
                             <span className={`ml-3 ${p.prix && Number(p.prix) > 0 ? "" : "font-semibold text-red-600"}`}>{eur(p.prix)}</span>
                             {!p.disponible && <span className="ml-3 text-xs text-orange-600">(masqué)</span>}
 
                             <p className="mt-1 text-xs text-gray-500">
-                              Comparatif :{" "}
-                              {MARQUES.map((m, i) => (
-                                <span key={m.champ}>
-                                  {i > 0 && " · "}
-                                  {p[m.champ] ? (
-                                    <Link href={p[m.champ] as string} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                                      {m.nom} ↗
-                                    </Link>
-                                  ) : (
-                                    <span className="text-gray-400">{m.nom} —</span>
-                                  )}
-                                </span>
-                              ))}
+                              {p.lien_comparaison ? (
+                                <Link href={p.lien_comparaison} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                                  Comparez ↗
+                                </Link>
+                              ) : (
+                                <span className="text-gray-400">Pas de lien « Comparez »</span>
+                              )}
                             </p>
                           </div>
-                          <div className="flex gap-3 text-sm">
+                          <div className="flex flex-wrap gap-3 text-sm">
+                            <button onClick={() => basculerAvant(p)} className="text-amber-600 underline">
+                              {p.mis_en_avant ? "Retirer ★" : "Mettre en ★"}
+                            </button>
                             <button onClick={() => ouvrirEdition(p)} className="text-blue-600 underline">Modifier</button>
                             <button onClick={() => basculer(p)} className="text-orange-600 underline">{p.disponible ? "Masquer" : "Afficher"}</button>
                             <button onClick={() => supprimer(p)} className="text-red-600 underline">Supprimer</button>
