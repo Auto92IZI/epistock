@@ -20,6 +20,7 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
   const [produits, setProduits] = useState<P[]>([])
   const [choix, setChoix] = useState<Record<string, number>>({})
   const [qte, setQte] = useState<Record<string, number>>({})
+  const [ouverts, setOuverts] = useState<Record<string, boolean>>({})
   const [ok, setOk] = useState("")
 
   useEffect(() => {
@@ -48,7 +49,13 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
             const f = produits
               .filter((p) => p.gamme === g)
               .sort((a, b) => Number(!!b.mis_en_avant) - Number(!!a.mis_en_avant) || a.prix - b.prix)
+            const enAvant = f.filter((p) => p.mis_en_avant)
+            const autresFormats = enAvant.length > 0 ? f.filter((p) => !p.mis_en_avant) : []
+
             const sel = f.find((p) => p.id === choix[g]) || f[0]
+            const deplie = !!ouverts[g] || (autresFormats.length > 0 && !sel.mis_en_avant)
+            const visibles = autresFormats.length > 0 && !deplie ? enAvant : f
+
             const q = qte[g] || 1
             const unitaire = prixAuLitreOuKilo(sel.format, Number(sel.prix))
 
@@ -57,7 +64,7 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
                 <h3 className="serif text-2xl font-semibold">{g}</h3>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {f.map((p) => {
+                  {visibles.map((p) => {
                     const actif = p.id === sel.id
                     const avant = !!p.mis_en_avant
                     return (
@@ -79,6 +86,23 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
                     )
                   })}
                 </div>
+
+                {autresFormats.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (deplie) {
+                        setOuverts({ ...ouverts, [g]: false })
+                        if (!sel.mis_en_avant) setChoix({ ...choix, [g]: enAvant[0].id })
+                      } else {
+                        setOuverts({ ...ouverts, [g]: true })
+                      }
+                    }}
+                    className="mt-2 text-xs underline"
+                    style={{ color: couleur }}
+                  >
+                    {deplie ? "Masquer les autres formats" : `Autres formats (${autresFormats.length})`}
+                  </button>
+                )}
 
                 {sel.mis_en_avant && (
                   <p className="mt-3 text-xs font-medium" style={{ color: couleur }}>★ Notre sélection</p>
