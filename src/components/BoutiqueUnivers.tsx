@@ -40,7 +40,7 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
     <section id="commander" className="bg-white px-5 py-16">
       <div className="mx-auto max-w-6xl">
         <h2 className="serif text-4xl font-semibold" style={{ color: couleur }}>Commander</h2>
-        <p className="mt-2 text-sm text-[#5b5a53]">Sur commande, à retirer sur place. Nous vous prévenons dès que c'est prêt.</p>
+        <p className="mt-2 text-sm text-[#5b5a53]">Nous vous préviendrons dès que votre commande sera prête.</p>
         {gammes.length === 0 && <p className="mt-8 text-[#5b5a53]">Les produits arrivent bientôt.</p>}
 
         <div className="mt-8 grid gap-6 md:grid-cols-2">

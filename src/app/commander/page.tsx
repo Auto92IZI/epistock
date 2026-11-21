@@ -7,7 +7,6 @@ export default function Commande() {
   const [p, setP] = useState<Ligne[]>([])
   const [nom, setNom] = useState("")
   const [tel, setTel] = useState("")
-  const [age, setAge] = useState(false)
   const [err, setErr] = useState("")
   const [envoi, setEnvoi] = useState(false)
   const [num, setNum] = useState<number | null>(null)
@@ -20,7 +19,6 @@ export default function Commande() {
   async function valider() {
     setErr("")
     if (!nom.trim() || !tel.trim()) { setErr("Merci d'indiquer votre nom et votre téléphone."); return }
-    if (!age) { setErr("Merci de confirmer que vous avez 18 ans ou plus."); return }
     setEnvoi(true)
     try {
       const r = await fetch("/api/commande", {
@@ -45,7 +43,7 @@ export default function Commande() {
   if (num) return (
     <main className="mx-auto max-w-xl px-5 py-20 text-center">
       <h1 className="serif text-4xl font-semibold">Merci !</h1>
-      <p className="mt-4">Commande n°{num} bien reçue. Elle sera généralement prête sous 24 à 48 h ; nous vous enverrons un message dès qu'elle le sera.</p>
+      <p className="mt-4">Commande n°{num} bien reçue. Un message vous sera envoyé dès que votre commande sera prête.</p>
       <Link href="/" className="mt-8 inline-block underline">Retour à l'accueil</Link>
     </main>
   )
@@ -76,8 +74,7 @@ export default function Commande() {
           <div className="mt-8 space-y-3">
             <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom et prénom" className="w-full rounded-lg border bg-white px-4 py-3" />
             <input value={tel} onChange={(e) => setTel(e.target.value)} placeholder="Téléphone" type="tel" className="w-full rounded-lg border bg-white px-4 py-3" />
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={age} onChange={(e) => setAge(e.target.checked)} /> Je confirme avoir 18 ans ou plus</label>
-            <p className="rounded-lg border bg-white p-3 text-sm text-[#5b5a53]">Retrait uniquement. Votre commande sera généralement prête sous 24 à 48 h ; un message vous sera envoyé dès qu'elle sera disponible.</p>
+            <p className="rounded-lg border bg-white p-3 text-sm text-[#5b5a53]">Un message vous sera envoyé dès que votre commande sera prête.</p>
             {err && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</p>}
             <button onClick={valider} disabled={envoi} className="w-full rounded-full bg-[#2B2A26] px-5 py-3 font-medium text-white disabled:opacity-50">
               {envoi ? "Envoi..." : "Valider ma commande"}
