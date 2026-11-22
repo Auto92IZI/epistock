@@ -32,7 +32,7 @@ export default function Accueil() {
         </div>
       </section>
 
-      <section id="univers" className="mx-auto grid max-w-6xl gap-5 px-5 pb-20 sm:grid-cols-2">
+      <section id="univers" className="mx-auto grid max-w-6xl gap-5 px-5 pb-20 md:grid-cols-3">
         {Object.entries(UNIVERS).map(([slug, u]) => (
           <Link
             key={slug}

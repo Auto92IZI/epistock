@@ -29,7 +29,7 @@ export default function ProduitsPage() {
   const [produits, setProduits] = useState<Produit[]>([])
   const [chargement, setChargement] = useState(true)
 
-  const [univers, setUnivers] = useState("huile-d-olive")
+  const [famille, setFamille] = useState("huile-d-olive")
   const [gamme, setGamme] = useState("")
   const [format, setFormat] = useState("")
   const [prix, setPrix] = useState("")
@@ -70,7 +70,7 @@ export default function ProduitsPage() {
     const res = await fetch("/api/produits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ univers, gamme: gamme.trim(), format: format.trim(), prix: p }),
+      body: JSON.stringify({ univers: famille, gamme: gamme.trim(), format: format.trim(), prix: p }),
     })
 
     const data = await res.json()
@@ -185,14 +185,93 @@ export default function ProduitsPage() {
     }
   }
 
+  function ligneProduit(p: Produit) {
+    return (
+      <div key={p.id} className={`border-t px-4 py-3 ${!p.disponible ? "bg-gray-50 opacity-70" : ""}`}>
+        {enEdition === p.id ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
+              <input value={eGamme} onChange={(e) => setEGamme(e.target.value)} className="min-w-[180px] flex-1 rounded border p-2" />
+              <input value={eFormat} onChange={(e) => setEFormat(e.target.value)} className="w-32 rounded border p-2" />
+              <input value={ePrix} onChange={(e) => setEPrix(e.target.value)} inputMode="decimal" className="w-24 rounded border p-2" />
+            </div>
+
+            <input
+              value={eLien}
+              onChange={(e) => setELien(e.target.value)}
+              placeholder="Lien « Comparez » vers le produit d'un concurrent (https://...)"
+              className="w-full rounded border p-2 text-sm"
+            />
+            <p className="text-xs text-gray-500">Collez l'adresse de la fiche produit. Laissez vide pour retirer le lien.</p>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={eAvant} onChange={(e) => setEAvant(e.target.checked)} />
+              ★ Mettre ce format en avant (affiché en premier et présélectionné)
+            </label>
+
+            <div className="flex gap-2">
+              <button onClick={() => enregistrer(p)} disabled={enregistrement} className="rounded bg-blue-600 px-3 py-2 text-sm text-white">
+                {enregistrement ? "..." : "Enregistrer"}
+              </button>
+              <button onClick={() => setEnEdition(null)} className="rounded bg-gray-200 px-3 py-2 text-sm">Annuler</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="font-medium">
+                {p.mis_en_avant && <span className="mr-1 text-amber-500">★</span>}
+                {p.format}
+              </span>
+              <span className={`ml-3 ${p.prix && Number(p.prix) > 0 ? "" : "font-semibold text-red-600"}`}>{eur(p.prix)}</span>
+              {!p.disponible && <span className="ml-3 text-xs text-orange-600">(masqué)</span>}
+
+              <p className="mt-1 text-xs text-gray-500">
+                {p.lien_comparaison ? (
+                  <Link href={p.lien_comparaison} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                    Comparez ↗
+                  </Link>
+                ) : (
+                  <span className="text-gray-400">Pas de lien « Comparez »</span>
+                )}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 text-sm">
+              <button onClick={() => basculerAvant(p)} className="text-amber-600 underline">
+                {p.mis_en_avant ? "Retirer ★" : "Mettre en ★"}
+              </button>
+              <button onClick={() => ouvrirEdition(p)} className="text-blue-600 underline">Modifier</button>
+              <button onClick={() => basculer(p)} className="text-orange-600 underline">{p.disponible ? "Masquer" : "Afficher"}</button>
+              <button onClick={() => supprimer(p)} className="text-red-600 underline">Supprimer</button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  function blocsDeGammes(liste: Produit[]) {
+    const gammes = Array.from(new Set(liste.map((p) => p.gamme)))
+
+    return gammes.map((g) => (
+      <div key={g} className="overflow-hidden rounded-xl border shadow-sm">
+        <p className="bg-gray-50 px-4 py-2 font-medium">{g}</p>
+        {liste.filter((p) => p.gamme === g).map(ligneProduit)}
+      </div>
+    ))
+  }
+
   if (chargement) {
     return <div className="p-8">Chargement du catalogue...</div>
   }
 
-  const gammesExistantes = Array.from(new Set(produits.filter((p) => p.univers === univers).map((p) => p.gamme)))
+  const gammesExistantes = Array.from(new Set(produits.filter((p) => p.univers === famille).map((p) => p.gamme)))
+
+  const famillesConnues = new Set(Object.values(UNIVERS).flatMap((u) => Object.keys(u.familles)))
+  const orphelins = produits.filter((p) => !famillesConnues.has(p.univers))
 
   return (
-    <main className="mx-auto max-w-4xl space-y-8 p-6">
+    <main className="mx-auto max-w-4xl space-y-10 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-bold">Catalogue produits</h1>
         <div className="flex items-center gap-4">
@@ -208,9 +287,13 @@ export default function ProduitsPage() {
         </p>
 
         <div className="flex flex-wrap gap-3">
-          <select value={univers} onChange={(e) => setUnivers(e.target.value)} className="rounded border p-2">
-            {Object.entries(UNIVERS).map(([cle, u]) => (
-              <option key={cle} value={cle}>{u.nom}</option>
+          <select value={famille} onChange={(e) => setFamille(e.target.value)} className="rounded border p-2" aria-label="Famille de produits">
+            {Object.entries(UNIVERS).map(([us, u]) => (
+              <optgroup key={us} label={u.nom}>
+                {Object.entries(u.familles).map(([fs, f]) => (
+                  <option key={fs} value={fs}>{f.nom}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
 
@@ -227,7 +310,7 @@ export default function ProduitsPage() {
             ))}
           </datalist>
 
-          <input value={format} onChange={(e) => setFormat(e.target.value)} placeholder="Format (ex. 750 ml)" className="w-40 rounded border p-2" />
+          <input value={format} onChange={(e) => setFormat(e.target.value)} placeholder="Format (ex. 250 g)" className="w-40 rounded border p-2" />
           <input value={prix} onChange={(e) => setPrix(e.target.value)} inputMode="decimal" placeholder="Prix (€)" className="w-28 rounded border p-2" />
 
           <button type="submit" disabled={ajout} className="rounded bg-blue-600 px-4 py-2 text-white">
@@ -236,93 +319,37 @@ export default function ProduitsPage() {
         </div>
       </form>
 
-      {Object.entries(UNIVERS).map(([cle, u]) => {
-        const duUnivers = produits.filter((p) => p.univers === cle)
-        const gammes = Array.from(new Set(duUnivers.map((p) => p.gamme)))
+      {Object.entries(UNIVERS).map(([us, u]) => (
+        <section key={us} className="space-y-4">
+          <h2 className="border-b pb-1 text-2xl font-bold" style={{ color: u.couleur }}>{u.nom}</h2>
 
-        return (
-          <section key={cle} className="space-y-3">
-            <h2 className="text-xl font-semibold" style={{ color: u.couleur }}>
-              {u.nom} <span className="text-sm font-normal text-gray-400">({duUnivers.length})</span>
-            </h2>
+          {Object.entries(u.familles).map(([fs, f]) => {
+            const dela = produits.filter((p) => p.univers === fs)
 
-            {gammes.length === 0 && <p className="text-sm text-gray-500">Aucun produit pour le moment.</p>}
+            return (
+              <div key={fs} className="space-y-3">
+                <h3 className="text-lg font-semibold" style={{ color: f.couleur ?? u.couleur }}>
+                  {f.nom} <span className="text-sm font-normal text-gray-400">({dela.length})</span>
+                </h3>
 
-            {gammes.map((g) => (
-              <div key={g} className="overflow-hidden rounded-xl border shadow-sm">
-                <p className="bg-gray-50 px-4 py-2 font-medium">{g}</p>
-
-                {duUnivers
-                  .filter((p) => p.gamme === g)
-                  .map((p) => (
-                    <div key={p.id} className={`border-t px-4 py-3 ${!p.disponible ? "bg-gray-50 opacity-70" : ""}`}>
-                      {enEdition === p.id ? (
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap gap-2">
-                            <input value={eGamme} onChange={(e) => setEGamme(e.target.value)} className="min-w-[180px] flex-1 rounded border p-2" />
-                            <input value={eFormat} onChange={(e) => setEFormat(e.target.value)} className="w-32 rounded border p-2" />
-                            <input value={ePrix} onChange={(e) => setEPrix(e.target.value)} inputMode="decimal" className="w-24 rounded border p-2" />
-                          </div>
-
-                          <input
-                            value={eLien}
-                            onChange={(e) => setELien(e.target.value)}
-                            placeholder="Lien « Comparez » vers le produit d'un concurrent (https://...)"
-                            className="w-full rounded border p-2 text-sm"
-                          />
-                          <p className="text-xs text-gray-500">
-                            Collez l'adresse de la fiche produit. Laissez vide pour retirer le lien.
-                          </p>
-
-                          <label className="flex items-center gap-2 text-sm">
-                            <input type="checkbox" checked={eAvant} onChange={(e) => setEAvant(e.target.checked)} />
-                            ★ Mettre ce format en avant (affiché en premier et présélectionné)
-                          </label>
-
-                          <div className="flex gap-2">
-                            <button onClick={() => enregistrer(p)} disabled={enregistrement} className="rounded bg-blue-600 px-3 py-2 text-sm text-white">
-                              {enregistrement ? "..." : "Enregistrer"}
-                            </button>
-                            <button onClick={() => setEnEdition(null)} className="rounded bg-gray-200 px-3 py-2 text-sm">Annuler</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <span className="font-medium">
-                              {p.mis_en_avant && <span className="mr-1 text-amber-500">★</span>}
-                              {p.format}
-                            </span>
-                            <span className={`ml-3 ${p.prix && Number(p.prix) > 0 ? "" : "font-semibold text-red-600"}`}>{eur(p.prix)}</span>
-                            {!p.disponible && <span className="ml-3 text-xs text-orange-600">(masqué)</span>}
-
-                            <p className="mt-1 text-xs text-gray-500">
-                              {p.lien_comparaison ? (
-                                <Link href={p.lien_comparaison} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                                  Comparez ↗
-                                </Link>
-                              ) : (
-                                <span className="text-gray-400">Pas de lien « Comparez »</span>
-                              )}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap gap-3 text-sm">
-                            <button onClick={() => basculerAvant(p)} className="text-amber-600 underline">
-                              {p.mis_en_avant ? "Retirer ★" : "Mettre en ★"}
-                            </button>
-                            <button onClick={() => ouvrirEdition(p)} className="text-blue-600 underline">Modifier</button>
-                            <button onClick={() => basculer(p)} className="text-orange-600 underline">{p.disponible ? "Masquer" : "Afficher"}</button>
-                            <button onClick={() => supprimer(p)} className="text-red-600 underline">Supprimer</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                {dela.length === 0 ? (
+                  <p className="text-sm text-gray-500">Aucun produit pour le moment.</p>
+                ) : (
+                  blocsDeGammes(dela)
+                )}
               </div>
-            ))}
-          </section>
-        )
-      })}
+            )
+          })}
+        </section>
+      ))}
+
+      {orphelins.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="border-b pb-1 text-2xl font-bold text-gray-500">Sans univers reconnu</h2>
+          <p className="text-sm text-gray-500">Ces produits ne s'affichent sur aucune page de la boutique.</p>
+          {blocsDeGammes(orphelins)}
+        </section>
+      )}
     </main>
   )
 }

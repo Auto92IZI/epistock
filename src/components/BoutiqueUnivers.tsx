@@ -16,7 +16,7 @@ type P = {
 
 const eur = (n: number) => `${Number(n).toFixed(2).replace(".", ",")} €`
 
-export default function BoutiqueUnivers({ slug, couleur }: { slug: string; couleur: string }) {
+export default function BoutiqueUnivers({ slug, couleur, titre = "Commander" }: { slug: string; couleur: string; titre?: string }) {
   const [produits, setProduits] = useState<P[]>([])
   const [choix, setChoix] = useState<Record<string, number>>({})
   const [qte, setQte] = useState<Record<string, number>>({})
@@ -37,9 +37,9 @@ export default function BoutiqueUnivers({ slug, couleur }: { slug: string; coule
   const gammes = Array.from(new Set(produits.map((p) => p.gamme)))
 
   return (
-    <section id="commander" className="bg-white px-5 py-16">
+    <section id={`commander-${slug}`} className="bg-white px-5 py-16">
       <div className="mx-auto max-w-6xl">
-        <h2 className="serif text-4xl font-semibold" style={{ color: couleur }}>Commander</h2>
+        <h2 className="serif text-4xl font-semibold" style={{ color: couleur }}>{titre}</h2>
         <p className="mt-2 text-sm text-[#5b5a53]">Nous vous préviendrons dès que votre commande sera prête.</p>
         {gammes.length === 0 && <p className="mt-8 text-[#5b5a53]">Les produits arrivent bientôt.</p>}
 
