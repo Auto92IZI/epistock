@@ -60,7 +60,7 @@ export default function BulleEnvies() {
       <button
         onClick={() => { setOuvert(true); setEnvoye(false); setErr("") }}
         aria-expanded={false}
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-[#4F5D2A] px-5 py-3 text-sm font-medium text-[#F4E9C8] shadow-lg ring-2 ring-[#C9A227]/70 transition hover:scale-105"
+        className="fixed bottom-4 right-4 z-40 flex items-center gap-1.5 rounded-full bg-[#4F5D2A] px-3.5 py-2 text-xs font-medium sm:gap-2 sm:px-5 sm:py-3 sm:text-sm text-[#F4E9C8] shadow-lg ring-2 ring-[#C9A227]/70 transition hover:scale-105"
       >
         <span aria-hidden="true">✨</span>
         {TITRE}
@@ -72,7 +72,7 @@ export default function BulleEnvies() {
     <div
       role="dialog"
       aria-label={TITRE}
-      className="bulle-ouvre fixed bottom-4 right-4 z-40 max-h-[85vh] w-[min(92vw,22rem)] overflow-y-auto rounded-3xl border border-[#C9A227]/50 bg-[#FBF7EC] p-5 shadow-2xl"
+      className="bulle-ouvre fixed bottom-4 right-4 z-40 max-h-[85vh] w-[min(88vw,20rem)] overflow-y-auto rounded-3xl border border-[#C9A227]/50 bg-[#FBF7EC] p-5 shadow-2xl"
     >
       <div className="flex items-start justify-between gap-3">
         <h2 className="serif text-2xl font-semibold text-[#4F5D2A]">{TITRE}</h2>
