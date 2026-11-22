@@ -365,6 +365,7 @@ export default function AdminPage() {
           <Link href="/" className="text-sm text-gray-600 underline">Voir la boutique</Link>
           <Link href="/admin/dashboard" className="text-sm text-blue-600 underline">Tableau de bord</Link>
           <Link href="/admin/produits" className="text-sm text-blue-600 underline">Produits</Link>
+          <Link href="/admin/demandes" className="text-sm text-blue-600 underline">Demandes</Link>
           <button onClick={deconnexion} className="text-sm text-gray-500 underline">Se déconnecter</button>
         </div>
       </div>

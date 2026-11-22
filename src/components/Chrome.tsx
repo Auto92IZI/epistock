@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { SITE, UNIVERS } from "@/content/site"
 import { lirePanier } from "@/lib/panier"
+import BulleEnvies from "@/components/BulleEnvies"
 
 export function Entete() {
   const p = usePathname()
@@ -43,11 +44,14 @@ export function Pied() {
   if (p?.startsWith("/admin")) return null
 
   return (
-    <footer className="border-t border-black/5 px-5 py-10 text-center text-xs text-[#6b6a62]">
-      <img src="/logo.webp" alt={SITE.nom} width={72} height={72} className="mx-auto mb-3 h-[72px] w-[72px]" />
-      <p className="serif text-lg text-[#2B2A26]">{SITE.nom}</p>
-      <p className="mt-2">L'abus d'alcool est dangereux pour la santé. À consommer avec modération.</p>
-      <Link href="/admin" aria-label="Administration" className="mt-4 inline-block opacity-30 hover:opacity-70">🔒</Link>
-    </footer>
+    <>
+      <footer className="border-t border-black/5 px-5 py-10 text-center text-xs text-[#6b6a62]">
+        <img src="/logo.webp" alt={SITE.nom} width={72} height={72} className="mx-auto mb-3 h-[72px] w-[72px]" />
+        <p className="serif text-lg text-[#2B2A26]">{SITE.nom}</p>
+        <p className="mt-2">L'abus d'alcool est dangereux pour la santé. À consommer avec modération.</p>
+        <Link href="/admin" aria-label="Administration" className="mt-4 inline-block opacity-30 hover:opacity-70">🔒</Link>
+      </footer>
+      <BulleEnvies />
+    </>
   )
 }

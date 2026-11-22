@@ -6,18 +6,21 @@ export function middleware(request: NextRequest) {
 
   if (
     pathname === "/admin/login" ||
-    pathname === "/api/login"
+    pathname === "/api/login" ||
+    pathname === "/api/codes-promo/verifier"
   ) {
     return NextResponse.next()
   }
 
   const routeProtegee =
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/api/admin") ||
     pathname.startsWith("/api/stock") ||
     pathname.startsWith("/api/produits") ||
     pathname.startsWith("/api/upload") ||
     pathname.startsWith("/api/commandes") ||
-    pathname.startsWith("/api/push")
+    pathname.startsWith("/api/push") ||
+    pathname.startsWith("/api/codes-promo")
 
   if (routeProtegee) {
     const session = request.cookies.get("admin_session")
@@ -38,5 +41,14 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/stock/:path*", "/api/produits/:path*", "/api/upload/:path*", "/api/commandes/:path*", "/api/push/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/stock/:path*",
+    "/api/produits/:path*",
+    "/api/upload/:path*",
+    "/api/commandes/:path*",
+    "/api/push/:path*",
+    "/api/codes-promo/:path*",
+  ],
 }
