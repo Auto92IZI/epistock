@@ -14,6 +14,7 @@ type Produit = {
   disponible: boolean
   mis_en_avant: boolean | null
   lien_comparaison: string | null
+  image_url: string | null
 }
 
 function eur(n: number | null) {
@@ -23,6 +24,59 @@ function eur(n: number | null) {
 function lirePrix(s: string) {
   const n = parseFloat(s.replace(",", "."))
   return isNaN(n) ? null : n
+}
+
+// Réduit la photo (1600 px max, JPEG) avant l'envoi : une photo de téléphone est trop lourde
+function compresser(fichier: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(fichier)
+    const img = new Image()
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const max = 1600
+      let { width, height } = img
+
+      if (width > max || height > max) {
+        const ratio = Math.min(max / width, max / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+
+      const canvas = document.createElement("canvas")
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext("2d")
+
+      if (!ctx) {
+        reject(new Error("Compression impossible"))
+        return
+      }
+
+      ctx.fillStyle = "#ffffff"
+      ctx.fillRect(0, 0, width, height)
+      ctx.drawImage(img, 0, 0, width, height)
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Compression impossible"))
+            return
+          }
+          resolve(new File([blob], "photo.jpg", { type: "image/jpeg" }))
+        },
+        "image/jpeg",
+        0.85
+      )
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error("Image illisible : essayez avec une photo au format JPEG ou PNG."))
+    }
+
+    img.src = url
+  })
 }
 
 export default function ProduitsPage() {
@@ -43,10 +97,12 @@ export default function ProduitsPage() {
   const [eAvant, setEAvant] = useState(false)
   const [enregistrement, setEnregistrement] = useState(false)
 
+  const [photoEnCours, setPhotoEnCours] = useState<string | null>(null)
+
   useEffect(() => {
     supabase
       .from("Produits")
-      .select("id, univers, gamme, format, prix, disponible, mis_en_avant, lien_comparaison")
+      .select("id, univers, gamme, format, prix, disponible, mis_en_avant, lien_comparaison, image_url")
       .not("univers", "is", null)
       .order("gamme")
       .order("prix")
@@ -185,6 +241,57 @@ export default function ProduitsPage() {
     }
   }
 
+  async function enregistrerPhoto(universProduit: string, gammeProduit: string, imageUrl: string | null) {
+    const res = await fetch("/api/produits/photo", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ univers: universProduit, gamme: gammeProduit, imageUrl }),
+    })
+
+    const data = await res.json()
+    if (!data.success) throw new Error(data.message || "Enregistrement impossible")
+
+    setProduits((anciens) =>
+      anciens.map((x) =>
+        x.univers === universProduit && x.gamme === gammeProduit ? { ...x, image_url: imageUrl } : x
+      )
+    )
+  }
+
+  async function changerPhoto(universProduit: string, gammeProduit: string, fichier: File) {
+    setPhotoEnCours(`${universProduit}|${gammeProduit}`)
+
+    try {
+      const reduite = await compresser(fichier)
+
+      const formData = new FormData()
+      formData.append("fichier", reduite)
+
+      const envoi = await fetch("/api/upload", { method: "POST", body: formData })
+      const retour = await envoi.json().catch(() => null)
+
+      if (!envoi.ok || !retour?.success) {
+        throw new Error(retour?.message || `Envoi impossible (code ${envoi.status})`)
+      }
+
+      await enregistrerPhoto(universProduit, gammeProduit, retour.imageUrl)
+    } catch (erreur) {
+      alert(erreur instanceof Error ? erreur.message : "Erreur lors de l'envoi de la photo")
+    } finally {
+      setPhotoEnCours(null)
+    }
+  }
+
+  async function retirerPhoto(universProduit: string, gammeProduit: string) {
+    if (!window.confirm(`Retirer la photo de « ${gammeProduit} » ?`)) return
+
+    try {
+      await enregistrerPhoto(universProduit, gammeProduit, null)
+    } catch (erreur) {
+      alert(erreur instanceof Error ? erreur.message : "Erreur lors du retrait de la photo")
+    }
+  }
+
   function ligneProduit(p: Produit) {
     return (
       <div key={p.id} className={`border-t px-4 py-3 ${!p.disponible ? "bg-gray-50 opacity-70" : ""}`}>
@@ -251,14 +358,55 @@ export default function ProduitsPage() {
   }
 
   function blocsDeGammes(liste: Produit[]) {
-    const gammes = Array.from(new Set(liste.map((p) => p.gamme)))
+    const cles = Array.from(new Set(liste.map((p) => `${p.univers}|${p.gamme}`)))
 
-    return gammes.map((g) => (
-      <div key={g} className="overflow-hidden rounded-xl border shadow-sm">
-        <p className="bg-gray-50 px-4 py-2 font-medium">{g}</p>
-        {liste.filter((p) => p.gamme === g).map(ligneProduit)}
-      </div>
-    ))
+    return cles.map((cle) => {
+      const lignes = liste.filter((p) => `${p.univers}|${p.gamme}` === cle)
+      const { univers: universGamme, gamme: nomGamme } = lignes[0]
+      const photo = lignes.find((p) => p.image_url)?.image_url || null
+      const enCours = photoEnCours === cle
+
+      return (
+        <div key={cle} className="overflow-hidden rounded-xl border shadow-sm">
+          <div className="flex flex-wrap items-center gap-3 bg-gray-50 px-4 py-2">
+            {photo ? (
+              <img src={photo} alt={nomGamme} className="h-14 w-14 rounded border bg-white object-contain" />
+            ) : (
+              <div className="flex h-14 w-14 items-center justify-center rounded border border-dashed text-center text-[10px] text-gray-400">
+                Pas de photo
+              </div>
+            )}
+
+            <p className="min-w-[120px] flex-1 font-medium">{nomGamme}</p>
+
+            <div className="flex items-center gap-3 text-sm">
+              <label className={`cursor-pointer text-blue-600 underline ${enCours ? "pointer-events-none opacity-50" : ""}`}>
+                {enCours ? "Envoi en cours..." : photo ? "📷 Changer la photo" : "📷 Ajouter une photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={enCours}
+                  onChange={(e) => {
+                    const fichier = e.target.files?.[0]
+                    e.target.value = ""
+                    if (fichier) changerPhoto(universGamme, nomGamme, fichier)
+                  }}
+                />
+              </label>
+
+              {photo && !enCours && (
+                <button onClick={() => retirerPhoto(universGamme, nomGamme)} className="text-red-600 underline">
+                  Retirer
+                </button>
+              )}
+            </div>
+          </div>
+
+          {lignes.map(ligneProduit)}
+        </div>
+      )
+    })
   }
 
   if (chargement) {
@@ -283,7 +431,7 @@ export default function ProduitsPage() {
       <form onSubmit={ajouter} className="space-y-3 rounded-xl border p-4 shadow-sm">
         <h2 className="text-lg font-semibold">Ajouter un produit</h2>
         <p className="text-sm text-gray-500">
-          Un produit correspond à un format. Pour proposer 3 formats d'une même huile, ajoutez-en 3 avec le même nom. L'étoile et le lien « Comparez » se règlent ensuite avec « Modifier ».
+          Un produit correspond à un format. Pour proposer 3 formats d'une même huile, ajoutez-en 3 avec le même nom. La photo se règle ensuite sur l'en-tête du produit, et elle vaut pour tous ses formats.
         </p>
 
         <div className="flex flex-wrap gap-3">

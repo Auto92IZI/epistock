@@ -12,6 +12,7 @@ type P = {
   prix: number
   mis_en_avant: boolean | null
   lien_comparaison: string | null
+  image_url: string | null
 }
 
 type Groupe = { motCle: string; titre: string }
@@ -39,7 +40,7 @@ export default function BoutiqueUnivers({
   useEffect(() => {
     supabase
       .from("Produits")
-      .select("id,gamme,format,prix,mis_en_avant,lien_comparaison")
+      .select("id,gamme,format,prix,mis_en_avant,lien_comparaison,image_url")
       .eq("univers", slug)
       .eq("disponible", true)
       .gt("prix", 0)
@@ -83,99 +84,108 @@ export default function BoutiqueUnivers({
 
     const q = qte[g] || 1
     const unitaire = prixAuLitreOuKilo(sel.format, Number(sel.prix))
+    const photo = sel.image_url || f.find((p) => p.image_url)?.image_url || null
 
     return (
-      <div key={g} className="rounded-2xl border p-6 shadow-sm">
-        <TitreCarte className="serif text-2xl font-semibold">{g}</TitreCarte>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          {visibles.map((p) => {
-            const actif = p.id === sel.id
-            const avant = !!p.mis_en_avant
-            return (
-              <button
-                key={p.id}
-                onClick={() => setChoix({ ...choix, [g]: p.id })}
-                className={`rounded-full border px-4 py-2 text-sm ${avant ? "font-semibold" : "text-[#6b6a62]"}`}
-                style={
-                  actif
-                    ? { background: couleur, color: "#fff", borderColor: couleur }
-                    : avant
-                    ? { borderColor: couleur, color: couleur }
-                    : {}
-                }
-              >
-                {avant && "★ "}
-                {p.format}
-              </button>
-            )
-          })}
-        </div>
-
-        {autresFormats.length > 0 && (
-          <button
-            onClick={() => {
-              if (deplie) {
-                setOuverts({ ...ouverts, [g]: false })
-                if (!sel.mis_en_avant) setChoix({ ...choix, [g]: enAvant[0].id })
-              } else {
-                setOuverts({ ...ouverts, [g]: true })
-              }
-            }}
-            className="mt-2 text-xs underline"
-            style={{ color: couleur }}
-          >
-            {deplie ? "Masquer les autres formats" : `Autres formats (${autresFormats.length})`}
-          </button>
-        )}
-
-        {sel.mis_en_avant && (
-          <p className="mt-3 text-xs font-medium" style={{ color: couleur }}>★ Notre sélection</p>
-        )}
-
-        <p className="mt-3 text-2xl font-semibold" style={{ color: couleur }}>{eur(sel.prix)}</p>
-
-        {(unitaire || sel.lien_comparaison) && (
-          <p className="text-xs text-[#6b6a62]">
-            {unitaire}
-            {unitaire && sel.lien_comparaison && " · "}
-            {sel.lien_comparaison && (
-              <Link
-                href={sel.lien_comparaison}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-                style={{ color: couleur }}
-              >
-                Comparez ↗
-              </Link>
-            )}
-          </p>
-        )}
-
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex items-center rounded-full border">
-            <button className="h-10 w-10 text-lg" onClick={() => setQte({ ...qte, [g]: Math.max(1, q - 1) })}>−</button>
-            <input
-              type="number"
-              min={1}
-              value={q}
-              onChange={(e) => setQte({ ...qte, [g]: Math.max(1, parseInt(e.target.value) || 1) })}
-              className="w-14 bg-transparent text-center outline-none"
-            />
-            <button className="h-10 w-10 text-lg" onClick={() => setQte({ ...qte, [g]: q + 1 })}>+</button>
+      <div key={g} className="overflow-hidden rounded-2xl border shadow-sm">
+        {photo && (
+          <div className="flex h-60 items-center justify-center bg-[#F6F2E8] p-4">
+            <img src={photo} alt={g} loading="lazy" decoding="async" className="h-full w-full object-contain" />
           </div>
-          <button
-            onClick={() => {
-              ajouter({ id: sel.id, nom: g, format: sel.format, prix: Number(sel.prix), quantite: q })
-              setOk(g)
-              setTimeout(() => setOk(""), 1800)
-            }}
-            className="flex-1 rounded-full px-5 py-3 font-medium text-white"
-            style={{ background: couleur }}
-          >
-            {ok === g ? "Ajouté ✓" : "Ajouter à ma commande"}
-          </button>
+        )}
+
+        <div className="p-6">
+          <TitreCarte className="serif text-2xl font-semibold">{g}</TitreCarte>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {visibles.map((p) => {
+              const actif = p.id === sel.id
+              const avant = !!p.mis_en_avant
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setChoix({ ...choix, [g]: p.id })}
+                  className={`rounded-full border px-4 py-2 text-sm ${avant ? "font-semibold" : "text-[#6b6a62]"}`}
+                  style={
+                    actif
+                      ? { background: couleur, color: "#fff", borderColor: couleur }
+                      : avant
+                      ? { borderColor: couleur, color: couleur }
+                      : {}
+                  }
+                >
+                  {avant && "★ "}
+                  {p.format}
+                </button>
+              )
+            })}
+          </div>
+
+          {autresFormats.length > 0 && (
+            <button
+              onClick={() => {
+                if (deplie) {
+                  setOuverts({ ...ouverts, [g]: false })
+                  if (!sel.mis_en_avant) setChoix({ ...choix, [g]: enAvant[0].id })
+                } else {
+                  setOuverts({ ...ouverts, [g]: true })
+                }
+              }}
+              className="mt-2 text-xs underline"
+              style={{ color: couleur }}
+            >
+              {deplie ? "Masquer les autres formats" : `Autres formats (${autresFormats.length})`}
+            </button>
+          )}
+
+          {sel.mis_en_avant && (
+            <p className="mt-3 text-xs font-medium" style={{ color: couleur }}>★ Notre sélection</p>
+          )}
+
+          <p className="mt-3 text-2xl font-semibold" style={{ color: couleur }}>{eur(sel.prix)}</p>
+
+          {(unitaire || sel.lien_comparaison) && (
+            <p className="text-xs text-[#6b6a62]">
+              {unitaire}
+              {unitaire && sel.lien_comparaison && " · "}
+              {sel.lien_comparaison && (
+                <Link
+                  href={sel.lien_comparaison}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                  style={{ color: couleur }}
+                >
+                  Comparez ↗
+                </Link>
+              )}
+            </p>
+          )}
+
+          <div className="mt-4 flex items-center gap-3">
+            <div className="flex items-center rounded-full border">
+              <button className="h-10 w-10 text-lg" onClick={() => setQte({ ...qte, [g]: Math.max(1, q - 1) })}>−</button>
+              <input
+                type="number"
+                min={1}
+                value={q}
+                onChange={(e) => setQte({ ...qte, [g]: Math.max(1, parseInt(e.target.value) || 1) })}
+                className="w-14 bg-transparent text-center outline-none"
+              />
+              <button className="h-10 w-10 text-lg" onClick={() => setQte({ ...qte, [g]: q + 1 })}>+</button>
+            </div>
+            <button
+              onClick={() => {
+                ajouter({ id: sel.id, nom: g, format: sel.format, prix: Number(sel.prix), quantite: q })
+                setOk(g)
+                setTimeout(() => setOk(""), 1800)
+              }}
+              className="flex-1 rounded-full px-5 py-3 font-medium text-white"
+              style={{ background: couleur }}
+            >
+              {ok === g ? "Ajouté ✓" : "Ajouter à ma commande"}
+            </button>
+          </div>
         </div>
       </div>
     )
