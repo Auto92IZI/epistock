@@ -60,9 +60,10 @@ export default function BulleEnvies() {
       <button
         onClick={() => { setOuvert(true); setEnvoye(false); setErr("") }}
         aria-expanded={false}
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-1.5 rounded-full bg-[#4F5D2A] px-3.5 py-2 text-xs font-medium sm:gap-2 sm:px-5 sm:py-3 sm:text-sm text-[#F4E9C8] shadow-lg ring-2 ring-[#C9A227]/70 transition hover:scale-105"
+        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-[#4F5D2A] px-4 py-2.5 text-sm font-semibold text-[#F4E9C8] shadow-lg ring-2 ring-[#C9A227] transition hover:scale-105 sm:px-6 sm:py-3.5 sm:text-base"
       >
-        <span aria-hidden="true">✨</span>
+        <span className="bulle-halo pointer-events-none absolute inset-0 rounded-full" aria-hidden="true" />
+        <span className="bulle-etincelle text-xl sm:text-2xl" aria-hidden="true">✨</span>
         {TITRE}
       </button>
     )

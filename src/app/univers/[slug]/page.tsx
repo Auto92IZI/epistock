@@ -25,6 +25,25 @@ export default async function PageUnivers({ params }: { params: Promise<{ slug: 
 
   return (
     <main style={{ background: u.fond }}>
+      <nav
+        aria-label="Aller à la commande"
+        className="sticky top-[65px] z-30 border-b border-black/5 bg-white/90 backdrop-blur"
+      >
+        <div className="mx-auto flex max-w-6xl items-center gap-2 overflow-x-auto px-4 py-2">
+          {multi && <span className="shrink-0 text-sm text-[#6b6a62]">Commander :</span>}
+          {familles.map(([fs, f]) => (
+            <Link
+              key={fs}
+              href={`#commander-${fs}`}
+              className="shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold text-white"
+              style={{ background: f.couleur ?? u.couleur }}
+            >
+              {multi ? f.nom : "Commander"} ↓
+            </Link>
+          ))}
+        </div>
+      </nav>
+
       <section
         className="flex min-h-[70vh] items-end px-6 pb-16 text-white"
         style={{ backgroundImage: `linear-gradient(to top, rgba(20,18,12,.7), rgba(20,18,12,.15)), url(${u.hero}), ${degradeUnivers}`, backgroundSize: "cover", backgroundPosition: "center" }}
@@ -61,7 +80,7 @@ export default async function PageUnivers({ params }: { params: Promise<{ slug: 
         const degrade = `linear-gradient(135deg,${c},${a})`
 
         return (
-          <div key={fs} id={fs} className="scroll-mt-20">
+          <div key={fs} id={fs} className="scroll-mt-32">
             {multi && (
               <section className="px-5 pt-20 text-center">
                 <p className="text-xs uppercase tracking-[0.3em]" style={{ color: a }}>{f.mot}</p>
@@ -111,7 +130,7 @@ export default async function PageUnivers({ params }: { params: Promise<{ slug: 
               )
             })}
 
-            <BoutiqueUnivers slug={fs} couleur={c} titre={f.commander} />
+            <BoutiqueUnivers slug={fs} couleur={c} titre={f.commander} groupes={f.groupes} />
           </div>
         )
       })}

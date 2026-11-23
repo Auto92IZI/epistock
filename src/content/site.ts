@@ -12,6 +12,7 @@ export type Famille = {
   titre: string
   intro?: string
   commander: string
+  groupes?: { motCle: string; titre: string }[]
   couleur?: string
   accent?: string
   chapitres: Chapitre[]
@@ -124,6 +125,7 @@ export const UNIVERS: Record<string, Univers> = {
     familles: {
       porto: {
         nom: "Porto", mot: "Vinho do Porto", titre: "Porto rouge et blanc", commander: "Commander nos portos",
+        groupes: [{ motCle: "rouge", titre: "Nos portos rouges" }, { motCle: "blanc", titre: "Nos portos blancs" }],
         couleur: "#6E1B38", accent: "#C0506A",
         intro: "Le porto vient de la vallée du Douro, dans le nord du Portugal, l'une des plus anciennes régions viticoles délimitées au monde. Ses vignes en terrasses, plantées sur des coteaux de schiste, dessinent un paysage unique.",
         chapitres: [
