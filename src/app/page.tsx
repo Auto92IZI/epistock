@@ -1,10 +1,15 @@
 import Link from "next/link"
+import { cookies } from "next/headers"
 import { SITE, UNIVERS } from "@/content/site"
 import IosInstallBanner from "@/components/IosInstallBanner"
+import IntroVideo from "@/components/IntroVideo"
 
-export default function Accueil() {
+export default async function Accueil() {
+  const dejaVu = (await cookies()).has("intro-vu")
+
   return (
     <main>
+      {!dejaVu && <IntroVideo />}
       <section
         className="flex min-h-[78vh] items-center justify-center px-6 py-16 text-center text-white"
         style={{ backgroundImage: "linear-gradient(rgba(30,28,20,.45),rgba(30,28,20,.65)), url(/images/accueil.jpg), linear-gradient(135deg,#4F5D2A,#B7791F 55%,#6E1B38)", backgroundSize: "cover", backgroundPosition: "center" }}

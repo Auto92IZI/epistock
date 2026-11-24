@@ -53,3 +53,13 @@ body { background: #FAF6EE; color: #2B2A26; }
 @media (prefers-reduced-motion: reduce) {
   .bulle-halo, .bulle-etincelle { animation: none; }
 }
+
+.intro-overlay {
+  background-color: #E3E0D6;
+  background-image: url(/intro/poster-paysage.jpg);
+  background-size: cover;
+  background-position: center;
+}
+@media (orientation: portrait) {
+  .intro-overlay { background-image: url(/intro/poster-portrait.jpg); }
+}
