@@ -63,3 +63,30 @@ body { background: #FAF6EE; color: #2B2A26; }
 @media (orientation: portrait) {
   .intro-overlay { background-image: url(/intro/poster-portrait.jpg); }
 }
+
+/* Parcours immersif : transitions entre décors */
+.calque {
+  transition: opacity 1100ms ease, transform 1400ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+.calque[data-etat="avant"] { opacity: 0; transform: scale(0.92); }
+.calque[data-etat="actif"] { opacity: 1; transform: scale(1); }
+.calque[data-etat="apres"] { opacity: 0; transform: scale(1.25); }
+
+.kenburns { animation: kenburns 22s ease-in-out infinite alternate; }
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.12) translate3d(-1.5%, -1%, 0); }
+}
+
+.carte-scene { transition: opacity 700ms ease, transform 700ms ease; }
+.carte-scene[data-actif="false"] { opacity: 0; transform: translateY(24px); }
+.carte-scene[data-actif="true"] { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .calque { transition: opacity 300ms; }
+  .calque[data-etat="avant"], .calque[data-etat="apres"] { transform: none; }
+  .kenburns { animation: none; }
+  .carte-scene { transition: opacity 300ms; }
+  .carte-scene[data-actif="false"] { transform: none; }
+}
